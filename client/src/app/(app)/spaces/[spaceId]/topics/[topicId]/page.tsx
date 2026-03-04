@@ -1,10 +1,10 @@
 "use client";
 
-import ConversationPanel from "../../../../../components/panels/ConversationPanel";
-import ContextPanel from "../../../../../components/panels/ContextPanel";
-import { useUiStore } from "../../../../../store/uiStore";
+import ConversationPanel from "@/components/panels/ConversationPanel";
+import ContextPanel from "@/components/panels/ContextPanel";
+import { useUiStore } from "@/store/uiStore";
 
-export default function TopicPage({ params }: { params: { spaceId: string, _topicId: string } }) { // _topicId to avoid shadowing but we can just use useParams
+export default function TopicPage() {
     const isRightPanelOpen = useUiStore((state) => state.isRightPanelOpen);
 
     return (
