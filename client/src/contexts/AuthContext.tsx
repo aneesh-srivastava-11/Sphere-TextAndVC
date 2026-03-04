@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, onAuthStateChanged, signOut as firebaseSignOut, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { User, onAuthStateChanged, signOut as firebaseSignOut, signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
 import { apiFetch } from "../lib/api";
 
@@ -52,14 +52,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     useEffect(() => {
-        // Handle the result of the redirect flow
-        getRedirectResult(auth).then(async (result) => {
-            if (result?.user) {
-                setUser(result.user);
-                await refreshAccount(result.user);
-            }
-        }).catch(() => { /* Silent */ });
-
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setUser(firebaseUser);
             if (firebaseUser) {
@@ -73,8 +65,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const signInWithGoogle = async () => {
-        // Force Solve: Use Redirect instead of Popup to bypass COOP/Popup blocking
-        await signInWithRedirect(auth, googleProvider);
+        // Vercel Fix: Use Popup instead of Redirect to bypass 404 inside /__/firebase/init.json
+        await signInWithPopup(auth, googleProvider);
     };
 
     const signOut = async () => {
