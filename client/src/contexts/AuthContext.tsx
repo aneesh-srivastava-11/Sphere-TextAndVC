@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, onAuthStateChanged, signOut as firebaseSignOut, signInWithPopup } from "firebase/auth";
+import { User, onAuthStateChanged, signOut as firebaseSignOut, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
 import { apiFetch } from "../lib/api";
 
@@ -52,6 +52,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     useEffect(() => {
+        // Handle the result of the redirect flow
+        getRedirectResult(auth).then(async (result) => {
+            if (result?.user) {
+                setUser(result.user);
+                await refreshAccount(result.user);
+            }
+        }).catch(() => { /* Silent */ });
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setUser(firebaseUser);
             if (firebaseUser) {
@@ -65,13 +73,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const signInWithGoogle = async () => {
-        try {
-            await signInWithPopup(auth, googleProvider);
-        } catch (e) {
-            // If popup is blocked by COOP/browsers, redirect is the only choice left
-            // but for now we try to keep it simple with popup.
-            throw e;
-        }
+        // Force Solve: Use Redirect instead of Popup to bypass COOP/Popup blocking
+        await signInWithRedirect(auth, googleProvider);
     };
 
     const signOut = async () => {
