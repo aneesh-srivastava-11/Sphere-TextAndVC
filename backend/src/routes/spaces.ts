@@ -91,4 +91,39 @@ router.patch("/:id", async (req, res) => {
     }
 });
 
+// GET /api/spaces/:id/topics - List topics for a space
+router.get("/:id/topics", async (req, res) => {
+    try {
+        const spaceId = req.params.id;
+        const topicsRef = db.collection("topics");
+        const snapshot = await topicsRef.where("spaceId", "==", spaceId).get();
+        const topics = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json(topics);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch topics" });
+    }
+});
+
+// POST /api/spaces/:id/topics - Create a topic in a space
+router.post("/:id/topics", async (req, res) => {
+    try {
+        const spaceId = req.params.id;
+        const { name, description } = req.body;
+        if (!name) return res.status(400).json({ error: "name is required" });
+
+        const newTopic = {
+            spaceId,
+            name,
+            description: description || "",
+            isArchived: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        const docRef = await db.collection("topics").add(newTopic);
+        res.status(201).json({ id: docRef.id, ...newTopic });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to create topic" });
+    }
+});
+
 export default router;

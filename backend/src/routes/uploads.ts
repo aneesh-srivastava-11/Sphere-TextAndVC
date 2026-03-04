@@ -1,16 +1,34 @@
 import express from "express";
 import { verifyToken } from "../middleware/verifyToken";
-import { db, storage } from "../lib/firebase";
+import { db } from "../lib/firebase";
 import multer from "multer";
 import * as admin from "firebase-admin";
 import { v4 as uuidv4 } from "uuid";
+import path from "path";
+import fs from "fs";
 
 const router = express.Router();
 router.use(verifyToken);
 
-// Using multer memory storage since we upload directly to Firebase Storage
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, "../../uploads");
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Map files to disk 
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadDir)
+    },
+    filename: function (req, file, cb) {
+        const extension = file.originalname.split(".").pop() || "";
+        cb(null, `${uuidv4()}.${extension}`)
+    }
+})
+
 const upload = multer({
-    storage: multer.memoryStorage(),
+    storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
@@ -25,24 +43,12 @@ router.post("/", upload.single("file"), async (req, res) => {
         const accountId = req.account?.id;
         if (!accountId) return res.status(401).json({ error: "Unauthorized" });
 
-        // Ensure bucket is set
-        const bucket = storage.bucket();
-        const extension = file.originalname.split(".").pop();
-        const filename = `${uuidv4()}.${extension}`;
-        const storagePath = `uploads/${accountId}/${filename}`;
+        // The file is already saved to disk by multer at this point.
+        // req.file.filename contains the generated UUID name.
 
-        const fileRef = bucket.file(storagePath);
-
-        // Upload the file buffer to Firebase Storage
-        await fileRef.save(file.buffer, {
-            metadata: { contentType: file.mimetype },
-        });
-
-        // Make file publicly readable
-        await fileRef.makePublic();
-
-        // Get the public URL. Note: Firebase format for public bucket files
-        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+        // Using the host/port the server is running on (fallback to localhost:4000)
+        const hostUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+        const publicUrl = `${hostUrl}/uploads/${file.filename}`;
 
         // Note: We don't link it to a messageId here. The client receives the URL and 
         // attaches it when creating a message. However, tracking attachments in the DB is good.
