@@ -1,9 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import { User, onAuthStateChanged, signOut as firebaseSignOut, getRedirectResult } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithRedirect } from "firebase/auth";
 import { apiFetch } from "../lib/api";
 
 export interface Account {
@@ -39,10 +39,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const refreshAccount = async (firebaseUser: User) => {
         try {
-            // Get fresh token
             const token = await firebaseUser.getIdToken();
 
-            // Upsert account in backend
             const res = await fetch(`/api/auth/session`, {
                 method: "POST",
                 headers: {
@@ -60,6 +58,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     useEffect(() => {
+        // Handle redirect result first (fires once after returning from Google)
+        getRedirectResult(auth).then(async (result) => {
+            if (result?.user) {
+                setUser(result.user);
+                await refreshAccount(result.user);
+            }
+        }).catch(() => { });
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setUser(firebaseUser);
             if (firebaseUser) {
@@ -74,12 +80,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const signInWithGoogle = async () => {
-        try {
-            await signInWithPopup(auth, googleProvider);
-            // onAuthStateChanged will handle the rest
-        } catch (error) {
-            throw error;
-        }
+        // Redirect flow — avoids COOP/popup issues entirely
+        await signInWithRedirect(auth, googleProvider);
     };
 
     const signOut = async () => {
