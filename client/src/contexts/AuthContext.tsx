@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, onAuthStateChanged, signOut as firebaseSignOut, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { User, onAuthStateChanged, signOut as firebaseSignOut, signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
 import { apiFetch } from "../lib/api";
 
@@ -52,22 +52,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     useEffect(() => {
-        let isProcessingRedirect = false;
-
-        // Check for redirect result first
-        getRedirectResult(auth).then(async (result) => {
-            if (result?.user) {
-                isProcessingRedirect = true;
-                setUser(result.user);
-                await refreshAccount(result.user);
-                setLoading(false);
-            }
-        }).catch(() => { /* Silent */ });
-
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            // Give the redirect result handler some time to claim authority
-            if (isProcessingRedirect) return;
-
             setUser(firebaseUser);
             if (firebaseUser) {
                 await refreshAccount(firebaseUser);
@@ -82,7 +67,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const signInWithGoogle = async () => {
         setLoading(true);
-        await signInWithRedirect(auth, googleProvider);
+        try {
+            // Vercel Fix: Native Popup Flow.
+            // Requires EXACT Vercel Domain to be in Firebase > Auth > Settings > Authorized Domains
+            await signInWithPopup(auth, googleProvider);
+        } catch (error) {
+            setLoading(false);
+            console.error("Popup Sign-in Error:", error);
+            throw error;
+        }
     };
 
     const signOut = async () => {
