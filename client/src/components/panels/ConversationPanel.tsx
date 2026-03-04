@@ -30,7 +30,7 @@ export default function ConversationPanel() {
 
     const { data: topic } = useSWR(topicId ? `/api/topics/${topicId}` : null, apiFetch);
 
-    // Combine SWR history with live socket messages
+    // Combine SWR history with live Firestore messages
     const allMessages = [...(historyMessages || []), ...liveMessages].sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
