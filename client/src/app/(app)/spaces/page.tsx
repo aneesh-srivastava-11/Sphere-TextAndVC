@@ -22,8 +22,8 @@ export default function SpacesBrowser() {
                 body: JSON.stringify({ name: newSpaceName, slug: newSpaceSlug, isPrivate: false })
             });
             window.location.reload(); // Simple refresh for MVP
-        } catch (err) {
-            console.error(err);
+        } catch {
+            // error handled silently
         }
     };
 

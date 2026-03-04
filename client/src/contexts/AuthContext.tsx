@@ -54,8 +54,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 const accData = await res.json();
                 setAccount(accData);
             }
-        } catch (error) {
-            console.error("Failed to fetch account session:", error);
+        } catch {
+            // silently ignore session fetch errors
         }
     };
 
@@ -78,7 +78,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             await signInWithPopup(auth, googleProvider);
             // onAuthStateChanged will handle the rest
         } catch (error) {
-            console.error("Google sign in error", error);
             throw error;
         }
     };

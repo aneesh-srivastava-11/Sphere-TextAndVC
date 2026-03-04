@@ -27,8 +27,8 @@ export default function SpacePage() {
             setNewTopicName("");
             setIsCreating(false);
             mutate(); // Refresh SWR cache
-        } catch (err) {
-            console.error(err);
+        } catch {
+            // error handled silently
         }
     };
 

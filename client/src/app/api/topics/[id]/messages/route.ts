@@ -3,21 +3,13 @@ import { dbAdmin } from "@/lib/firebaseAdmin";
 import { getAuthenticatedAccount } from "@/lib/authSession";
 import { FieldValue } from "firebase-admin/firestore";
 
-<<<<<<< HEAD
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-=======
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
->>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
     const account = await getAuthenticatedAccount(req);
     if (!account) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
-<<<<<<< HEAD
         const { id } = await params;
         const topicId = id;
-=======
-        const topicId = params.id;
->>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         const searchParams = req.nextUrl.searchParams;
         const limit = Number(searchParams.get("limit") || 50);
 
@@ -51,27 +43,18 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         });
 
         return NextResponse.json(messages);
-    } catch (error) {
-        console.error("Messages fetch error:", error);
+    } catch {
         return NextResponse.json({ error: "Failed to fetch messages" }, { status: 500 });
     }
 }
 
-<<<<<<< HEAD
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-=======
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
->>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
     const account = await getAuthenticatedAccount(req);
     if (!account) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
-<<<<<<< HEAD
         const { id } = await params;
         const topicId = id;
-=======
-        const topicId = params.id;
->>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         const { content } = await req.json();
 
         if (!content) return NextResponse.json({ error: "content is required" }, { status: 400 });
@@ -87,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
         const docRef = await dbAdmin.collection("messages").add(newMessage);
         return NextResponse.json({ id: docRef.id, ...newMessage }, { status: 201 });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Failed to create message" }, { status: 500 });
     }
 }

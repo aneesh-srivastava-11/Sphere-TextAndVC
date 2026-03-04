@@ -10,13 +10,10 @@ export async function GET(req: NextRequest) {
     try {
         const spacesRef = dbAdmin.collection("spaces");
         const snapshot = await spacesRef.where("isPrivate", "==", false).get();
-<<<<<<< HEAD
-=======
 
->>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         const publicSpaces = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return NextResponse.json(publicSpaces);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Failed to fetch spaces" }, { status: 500 });
     }
 }
@@ -46,7 +43,7 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json({ id: docRef.id, ...newSpace }, { status: 201 });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: "Failed to create space" }, { status: 500 });
     }
 }

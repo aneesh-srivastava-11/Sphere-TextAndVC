@@ -88,8 +88,8 @@ export default function ConversationPanel() {
             });
 
             // The onSnapshot listener will automatically pick up this new message and append it!
-        } catch (err) {
-            console.error("Content send error", err);
+        } catch {
+            // error handled silently
         }
     };
 

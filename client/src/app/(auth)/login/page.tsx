@@ -27,8 +27,7 @@ export default function LoginPage() {
                         window.localStorage.removeItem('emailForSignIn');
                         // The AuthContext onAuthStateChanged listener will handle routing
                     })
-                    .catch((error) => {
-                        console.error("Error signing in with email link", error);
+                    .catch(() => {
                         setStatus("error");
                         setErrorMessage("Failed to sign in. The link may have expired.");
                     });
@@ -62,7 +61,6 @@ export default function LoginPage() {
             window.localStorage.setItem('emailForSignIn', email);
             setStatus("sent");
         } catch (err: any) {
-            console.error(err);
             setStatus("error");
             setErrorMessage(err.message || "Failed to send email link");
         }

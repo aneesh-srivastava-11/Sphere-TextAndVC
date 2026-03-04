@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authAdmin, dbAdmin } from "@/lib/firebaseAdmin";
-<<<<<<< HEAD
 import { FieldValue } from "firebase-admin/firestore";
-=======
->>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
 
 export async function POST(req: NextRequest) {
     try {
@@ -24,26 +21,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ id: doc.id, ...doc.data() });
         }
 
-<<<<<<< HEAD
-=======
         // Create new account
->>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         const newAccount = {
             firebaseUid: uid,
             email: email || null,
             displayName: null,
             avatarUrl: picture || null,
-<<<<<<< HEAD
             createdAt: FieldValue.serverTimestamp(),
-=======
-            createdAt: new Date().toISOString(),
->>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         };
 
         const docRef = await accountsRef.add(newAccount);
         return NextResponse.json({ id: docRef.id, ...newAccount }, { status: 201 });
-    } catch (error) {
-        console.error("Session API Error:", error);
+    } catch {
         return NextResponse.json({ error: "Failed to create or verify session" }, { status: 500 });
     }
 }
