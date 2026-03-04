@@ -31,6 +31,10 @@ export async function PATCH(req: NextRequest) {
         }
 
         await accountDoc.ref.update({ displayName: trimmedName });
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         return NextResponse.json({ id: accountDoc.id, displayName: trimmedName, message: "Updated" });
     } catch (error) {
         console.error("Display Name API Error:", error);

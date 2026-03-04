@@ -24,7 +24,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
         }
     };
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}${endpoint}`, config);
+    const response = await fetch(endpoint, config);
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
     try {
         const spacesRef = dbAdmin.collection("spaces");
         const snapshot = await spacesRef.where("isPrivate", "==", false).get();
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         const publicSpaces = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         return NextResponse.json(publicSpaces);
     } catch (error) {

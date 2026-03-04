@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { dbAdmin } from "@/lib/firebaseAdmin";
 import { getAuthenticatedAccount } from "@/lib/authSession";
 
+<<<<<<< HEAD
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+=======
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+>>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
     const account = await getAuthenticatedAccount(req);
     if (!account) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
+<<<<<<< HEAD
         const { id } = await params;
+=======
+        const { id } = params;
+>>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         const doc = await dbAdmin.collection("spaces").doc(id).get();
         if (!doc.exists) return NextResponse.json({ error: "Space not found" }, { status: 404 });
 
@@ -17,12 +25,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 }
 
+<<<<<<< HEAD
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+=======
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+>>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
     const account = await getAuthenticatedAccount(req);
     if (!account) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     try {
+<<<<<<< HEAD
         const { id } = await params;
+=======
+        const { id } = params;
+>>>>>>> 4adca768ab3bf2a9d2d726ed29cf554bda79432f
         const spaceRef = dbAdmin.collection("spaces").doc(id);
         const spaceDoc = await spaceRef.get();
 
