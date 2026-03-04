@@ -1,5 +1,6 @@
 import express from "express";
 import http from "http";
+import path from "path";
 import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -27,6 +28,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Serve static uploaded files locally
+app.use("/uploads", express.static(path.join(__dirname, "../../uploads")));
 
 // Initialize Socket.io
 export const io = new Server(server, {

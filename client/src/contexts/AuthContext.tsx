@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const token = await firebaseUser.getIdToken();
 
             // Upsert account in backend
-            const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/session`, {
+            const res = await fetch(`/api/auth/session`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`

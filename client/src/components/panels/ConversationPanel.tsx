@@ -5,10 +5,11 @@ import useSWR from "swr";
 import { apiFetch } from "../../lib/api";
 import { useParams } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
-import { io, Socket } from "socket.io-client";
-import { auth } from "../../lib/firebase";
-import { PanelRight, Hash, Pin, Paperclip, Send } from "lucide-react";
+import { auth, db } from "../../lib/firebase";
+import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { PanelRight, Hash, Pin, Paperclip, Send, Video } from "lucide-react";
 import { useUiStore } from "../../store/uiStore";
+import VideoRoom from "../video/VideoRoom";
 
 export default function ConversationPanel() {
     const { topicId, spaceId } = useParams() as { topicId: string, spaceId: string };
@@ -16,8 +17,8 @@ export default function ConversationPanel() {
     const toggleRightPanel = useUiStore((state) => state.toggleRightPanel);
     const isRightPanelOpen = useUiStore((state) => state.isRightPanelOpen);
 
+    const [isCallActive, setIsCallActive] = useState(false);
     const [liveMessages, setLiveMessages] = useState<any[]>([]);
-    const [socket, setSocket] = useState<Socket | null>(null);
     const [composerText, setComposerText] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,42 +40,38 @@ export default function ConversationPanel() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [allMessages]);
 
+    // Realtime Firestore Listener
     useEffect(() => {
         if (!topicId || !auth.currentUser) return;
 
-        let newSocket: Socket;
+        const q = query(
+            collection(db, "messages"),
+            where("topicId", "==", topicId),
+            orderBy("createdAt", "desc"),
+            limit(10) // Only care about catching new incoming messages to append to history
+        );
 
-        const initSocket = async () => {
-            const token = await auth.currentUser!.getIdToken();
-            newSocket = io(process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000", {
-                auth: { token },
-            });
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
 
-            newSocket.on("connect", () => {
-                console.log("Connected to Realtime Server");
-                newSocket.emit("topic:join", topicId);
-            });
+            // Reverse so chronological 
+            fetched.reverse();
 
-            newSocket.on("message:received", (msg) => {
-                setLiveMessages(prev => {
-                    // Prevent duplicates if SWR refetches
-                    if (prev.find(m => m.id === msg.id)) return prev;
-                    if (historyMessages?.find((m: any) => m.id === msg.id)) return prev;
-                    return [...prev, msg];
+            setLiveMessages(prev => {
+                const combined = [...prev];
+                fetched.forEach(msg => {
+                    // Prevent duplicates from SWR or previous live messages
+                    const inHistory = historyMessages?.find((m: any) => m.id === msg.id);
+                    const inLive = combined.find((m: any) => m.id === msg.id);
+                    if (!inHistory && !inLive && msg.createdAt) {
+                        combined.push(msg);
+                    }
                 });
+                return combined;
             });
+        });
 
-            setSocket(newSocket);
-        };
-
-        initSocket();
-
-        return () => {
-            if (newSocket) {
-                newSocket.emit("topic:leave", topicId);
-                newSocket.disconnect();
-            }
-        };
+        return () => unsubscribe();
     }, [topicId, historyMessages]);
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -85,20 +82,12 @@ export default function ConversationPanel() {
         setComposerText("");
 
         try {
-            const savedMsg = await apiFetch(`/api/topics/${topicId}/messages`, {
+            await apiFetch(`/api/topics/${topicId}/messages`, {
                 method: "POST",
                 body: JSON.stringify({ topicId, content })
             });
 
-            // Emit to socket so others see it (our own client will also receive it to stay in sync, or we can optimistically append)
-            // For MVP, broadcast to room and rely on socket to bounce it back OR optimistic append
-            if (socket) {
-                socket.emit("message:new", { topicId, message: savedMsg });
-            }
-
-            // Optimitic append:
-            setLiveMessages(prev => [...prev, savedMsg]);
-
+            // The onSnapshot listener will automatically pick up this new message and append it!
         } catch (err) {
             console.error("Content send error", err);
         }
@@ -113,7 +102,16 @@ export default function ConversationPanel() {
                     <Hash className="text-text-tertiary" size={20} />
                     <h2 className="text-lg font-bold text-white">{topic?.name || "Topic"}</h2>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
+                    {!isCallActive && (
+                        <button
+                            onClick={() => setIsCallActive(true)}
+                            className="bg-brand-600 hover:bg-brand-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-md shadow-brand-500/20"
+                        >
+                            <Video size={16} />
+                            <span>Join Call</span>
+                        </button>
+                    )}
                     <button
                         onClick={toggleRightPanel}
                         className={`p-2 rounded-md transition-colors ${isRightPanelOpen ? 'bg-brand-500/20 text-brand-500' : 'text-text-tertiary hover:text-white hover:bg-white/5'}`}
@@ -123,6 +121,17 @@ export default function ConversationPanel() {
                     </button>
                 </div>
             </div>
+
+            {/* Video Call Overlay */}
+            {isCallActive && account && topicId && (
+                <div className="flex-shrink-0 animate-in slide-in-from-top-4 fade-in duration-300">
+                    <VideoRoom
+                        topicId={topicId}
+                        currentUserId={account.id}
+                        onClose={() => setIsCallActive(false)}
+                    />
+                </div>
+            )}
 
             {/* Message List */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">

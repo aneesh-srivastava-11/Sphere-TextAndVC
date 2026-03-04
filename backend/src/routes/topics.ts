@@ -82,4 +82,70 @@ router.delete("/:id", async (req, res) => {
     }
 });
 
+// GET /api/topics/:id/messages - List messages for a topic
+router.get("/:id/messages", async (req, res) => {
+    try {
+        const topicId = req.params.id;
+        const accountId = req.account?.id;
+
+        // 1. Fetch blocks involving this user
+        const blocksRef = db.collection("blocks");
+        const [blocks1, blocks2] = await Promise.all([
+            blocksRef.where("blockerId", "==", accountId).get(),
+            blocksRef.where("blockedId", "==", accountId).get(),
+        ]);
+
+        const blockedUserIds = new Set<string>();
+        blocks1.docs.forEach((doc) => blockedUserIds.add(doc.data().blockedId));
+        blocks2.docs.forEach((doc) => blockedUserIds.add(doc.data().blockerId));
+
+        // 2. Fetch messages ordered by creation
+        const messagesRef = db.collection("messages");
+        const snapshot = await messagesRef
+            .where("topicId", "==", topicId)
+            .orderBy("createdAt", "desc")
+            .limit(50)
+            .get();
+
+        let messages = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+        messages.reverse();
+
+        messages = messages.map(msg => {
+            if (blockedUserIds.has(msg.authorId)) {
+                return { ...msg, content: null, isGhostBlocked: true, authorId: "blocked_user" };
+            }
+            return msg;
+        });
+
+        res.json(messages);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch messages" });
+    }
+});
+
+// POST /api/topics/:id/messages - Create a message
+router.post("/:id/messages", async (req, res) => {
+    try {
+        const topicId = req.params.id;
+        const { content } = req.body;
+        const accountId = req.account?.id;
+
+        if (!content) return res.status(400).json({ error: "content is required" });
+
+        const newMessage = {
+            topicId,
+            authorId: accountId,
+            content,
+            isPinned: false,
+            deletedAt: null,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        const docRef = await db.collection("messages").add(newMessage);
+        res.status(201).json({ id: docRef.id, ...newMessage });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to create message" });
+    }
+});
+
 export default router;
