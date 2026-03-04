@@ -1,9 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, onAuthStateChanged, signOut as firebaseSignOut, getRedirectResult } from "firebase/auth";
+import { User, onAuthStateChanged, signOut as firebaseSignOut, signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../lib/firebase";
-import { signInWithRedirect } from "firebase/auth";
 import { apiFetch } from "../lib/api";
 
 export interface Account {
@@ -40,32 +39,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const refreshAccount = async (firebaseUser: User) => {
         try {
             const token = await firebaseUser.getIdToken();
-
             const res = await fetch(`/api/auth/session`, {
                 method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
+                headers: { "Authorization": `Bearer ${token}` }
             });
 
             if (res.ok) {
                 const accData = await res.json();
                 setAccount(accData);
             }
-        } catch {
-            // silently ignore session fetch errors
-        }
+        } catch { /* Silent */ }
     };
 
     useEffect(() => {
-        // Handle redirect result first (fires once after returning from Google)
-        getRedirectResult(auth).then(async (result) => {
-            if (result?.user) {
-                setUser(result.user);
-                await refreshAccount(result.user);
-            }
-        }).catch(() => { });
-
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setUser(firebaseUser);
             if (firebaseUser) {
@@ -75,13 +61,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
             setLoading(false);
         });
-
         return () => unsubscribe();
     }, []);
 
     const signInWithGoogle = async () => {
-        // Redirect flow — avoids COOP/popup issues entirely
-        await signInWithRedirect(auth, googleProvider);
+        try {
+            await signInWithPopup(auth, googleProvider);
+        } catch (e) {
+            // If popup is blocked by COOP/browsers, redirect is the only choice left
+            // but for now we try to keep it simple with popup.
+            throw e;
+        }
     };
 
     const signOut = async () => {
