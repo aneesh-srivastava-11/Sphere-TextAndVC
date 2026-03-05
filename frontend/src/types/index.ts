@@ -96,4 +96,6 @@ export interface PeerConnection {
     socketId: string;
     connection: RTCPeerConnection;
     stream?: MediaStream;
+    isMicOn?: boolean;
+    isCameraOn?: boolean;
 }

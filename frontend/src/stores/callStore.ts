@@ -28,6 +28,7 @@ interface CallState {
     handleOffer: (data: { offer: RTCSessionDescriptionInit; fromUserId: string; fromSocketId: string }) => Promise<void>;
     handleAnswer: (data: { answer: RTCSessionDescriptionInit; fromSocketId: string }) => void;
     handleIceCandidate: (data: { candidate: RTCIceCandidateInit; fromSocketId: string }) => void;
+    handleStatusUpdate: (data: { userId: string; isMicOn: boolean; isCameraOn: boolean }) => void;
 }
 
 export const useCallStore = create<CallState>((set, get) => ({
@@ -57,7 +58,12 @@ export const useCallStore = create<CallState>((set, get) => ({
 
             const socket = getSocket();
             if (socket) {
-                socket.emit('call_join', { callId, conversationId: get().activeCall?.conversation_id });
+                socket.emit('call_join', {
+                    callId,
+                    conversationId: get().activeCall?.conversation_id,
+                    isMicOn: true,
+                    isCameraOn: true
+                });
             }
         } catch (err) {
             console.error('Failed to join call:', err);
@@ -92,18 +98,36 @@ export const useCallStore = create<CallState>((set, get) => ({
     },
 
     toggleCamera: () => {
-        const { localStream, isCameraOn } = get();
+        const { localStream, isCameraOn, activeCall } = get();
         if (localStream) {
             localStream.getVideoTracks().forEach(t => { t.enabled = !isCameraOn; });
             set({ isCameraOn: !isCameraOn });
+
+            const socket = getSocket();
+            if (socket && activeCall) {
+                socket.emit('call_status_update', {
+                    callId: activeCall.id,
+                    isMicOn: get().isMicOn,
+                    isCameraOn: !isCameraOn
+                });
+            }
         }
     },
 
     toggleMic: () => {
-        const { localStream, isMicOn } = get();
+        const { localStream, isMicOn, activeCall } = get();
         if (localStream) {
             localStream.getAudioTracks().forEach(t => { t.enabled = !isMicOn; });
             set({ isMicOn: !isMicOn });
+
+            const socket = getSocket();
+            if (socket && activeCall) {
+                socket.emit('call_status_update', {
+                    callId: activeCall.id,
+                    isMicOn: !isMicOn,
+                    isCameraOn: get().isCameraOn
+                });
+            }
         }
     },
 
@@ -244,12 +268,27 @@ export const useCallStore = create<CallState>((set, get) => ({
         });
     },
 
-    handleIceCandidate: (data) => {
+    handleIceCandidate: (data: { candidate: RTCIceCandidateInit; fromSocketId: string }) => {
         const peers = get().peers;
         peers.forEach(peer => {
             if (peer.socketId === data.fromSocketId) {
                 peer.connection.addIceCandidate(new RTCIceCandidate(data.candidate));
             }
+        });
+    },
+
+    handleStatusUpdate: (data: { userId: string; isMicOn: boolean; isCameraOn: boolean }) => {
+        set((state) => {
+            const peers = new Map(state.peers);
+            const peer = peers.get(data.userId);
+            if (peer) {
+                peers.set(data.userId, {
+                    ...peer,
+                    isMicOn: data.isMicOn,
+                    isCameraOn: data.isCameraOn
+                });
+            }
+            return { peers };
         });
     },
 }));

@@ -18,7 +18,7 @@ export default function HomePage() {
   const { user, loading, initialized, initialize } = useAuthStore();
   const { fetchConversations, fetchSpaces, activeConversation, setSidebarOpen } = useConversationStore();
   const { addMessage, updateMessage, removeMessage, updateReaction, addThreadReply, setTypingUser, clearTypingUser } = useMessageStore();
-  const { isInCall, handleUserJoined, handleUserLeft, handleOffer, handleAnswer, handleIceCandidate } = useCallStore();
+  const { isInCall, handleUserJoined, handleUserLeft, handleOffer, handleAnswer, handleIceCandidate, handleStatusUpdate } = useCallStore();
   const router = useRouter();
   const isMobile = useIsMobile();
 
@@ -61,6 +61,7 @@ export default function HomePage() {
     socket.on('call_offer', handleOffer);
     socket.on('call_answer', handleAnswer);
     socket.on('ice_candidate', handleIceCandidate);
+    socket.on('call_status_update', handleStatusUpdate);
 
     return () => {
       socket.off('new_message');
@@ -74,6 +75,7 @@ export default function HomePage() {
       socket.off('call_offer');
       socket.off('call_answer');
       socket.off('ice_candidate');
+      socket.off('call_status_update');
     };
   }, [user, addMessage, updateMessage, removeMessage, updateReaction, addThreadReply, setTypingUser, clearTypingUser, handleUserJoined, handleUserLeft, handleOffer, handleAnswer, handleIceCandidate]);
 

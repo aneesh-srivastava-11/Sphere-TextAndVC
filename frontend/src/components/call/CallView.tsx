@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useCallStore } from '@/stores/callStore';
 import { useAuthStore } from '@/stores/authStore';
+import { PeerConnection } from '@/types';
 import {
     PhoneOff, Video, VideoOff, Mic, MicOff, Monitor, MonitorOff, Users,
 } from 'lucide-react';
@@ -17,10 +18,10 @@ export default function CallView() {
     const localVideoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
-        if (localVideoRef.current && localStream) {
+        if (localVideoRef.current && localStream && isCameraOn) {
             localVideoRef.current.srcObject = localStream;
         }
-    }, [localStream]);
+    }, [localStream, isCameraOn]);
 
     if (!isInCall) return null;
 
@@ -33,9 +34,9 @@ export default function CallView() {
                 width: 52,
                 height: 52,
                 borderRadius: '50%',
-                background: danger ? '#dc2626' : active ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${danger ? '#dc2626' : 'rgba(255,255,255,0.1)'}`,
-                color: danger ? '#fff' : active ? '#fff' : '#737373',
+                background: danger ? '#dc2626' : !active ? '#ef4444' : 'rgba(255,255,255,0.1)',
+                border: `1px solid ${danger || !active ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
+                color: '#fff',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -139,9 +140,12 @@ export default function CallView() {
                                 backdropFilter: 'blur(8px)',
                                 letterSpacing: '0.1em',
                                 textTransform: 'uppercase',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6
                             }}
                         >
-                            You {!isMicOn && '🔇'}
+                            You {!isMicOn && <MicOff size={12} style={{ color: '#ef4444' }} />}
                         </div>
                     </div>
 
@@ -172,7 +176,7 @@ export default function CallView() {
     );
 }
 
-function PeerVideo({ peer }: { peer: { userId: string; socketId: string; stream?: MediaStream } }) {
+function PeerVideo({ peer }: { peer: PeerConnection }) {
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
@@ -228,9 +232,12 @@ function PeerVideo({ peer }: { peer: { userId: string; socketId: string; stream?
                     backdropFilter: 'blur(8px)',
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                 }}
             >
-                Participant
+                Participant {peer.isMicOn === false && <MicOff size={12} style={{ color: '#ef4444' }} />}
             </div>
         </div>
     );
