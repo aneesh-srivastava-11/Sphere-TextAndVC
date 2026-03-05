@@ -13,9 +13,16 @@ async function getAuthHeaders(): Promise<HeadersInit> {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const headers = await getAuthHeaders();
+
+    // Don't override Content-Type if it's FormData (browser sets the boundary for multipart)
+    const combinedHeaders: HeadersInit = { ...headers, ...options.headers };
+    if (options.body instanceof FormData) {
+        delete (combinedHeaders as any)['Content-Type'];
+    }
+
     const res = await fetch(`${BACKEND_URL}${path}`, {
         ...options,
-        headers: { ...headers, ...options.headers },
+        headers: combinedHeaders,
     });
 
     if (!res.ok) {
@@ -29,6 +36,25 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
     // Auth
     syncUser: () => request<any>('/api/auth/sync', { method: 'POST' }),
+
+    // Storage
+    uploadFile: async (file: File, bucket: 'avatars' | 'attachments') => {
+        const { supabase } = await import('./supabase');
+        const ext = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from(bucket)
+            .getPublicUrl(data.path);
+
+        return publicUrl;
+    },
 
     // Users
     getProfile: () => request<any>('/api/users/me'),
@@ -62,8 +88,8 @@ export const api = {
     // Messages
     getMessages: (convId: string, before?: string) =>
         request<any[]>(`/api/messages/${convId}${before ? `?before=${before}` : ''}`),
-    sendMessage: (convId: string, content: string) =>
-        request<any>(`/api/messages/${convId}`, { method: 'POST', body: JSON.stringify({ content }) }),
+    sendMessage: (convId: string, content: string, attachment?: { url: string, name: string, size: number, type: string }) =>
+        request<any>(`/api/messages/${convId}`, { method: 'POST', body: JSON.stringify({ content, attachment }) }),
     editMessage: (msgId: string, content: string) =>
         request<any>(`/api/messages/${msgId}`, { method: 'PATCH', body: JSON.stringify({ content }) }),
     deleteMessage: (msgId: string) =>
