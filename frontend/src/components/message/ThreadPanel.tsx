@@ -45,59 +45,128 @@ export default function ThreadPanel() {
     if (!activeThreadMessageId) return null;
 
     return (
-        <div className="fixed right-0 top-0 h-full glass-panel-strong flex flex-col z-40 animate-slide-right"
-            style={{ width: '380px', borderLeft: '1px solid var(--border-color)' }}>
+        <div
+            style={{
+                position: 'fixed',
+                right: 0,
+                top: 0,
+                height: '100%',
+                width: 380,
+                background: 'rgba(255,255,255,0.03)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderLeft: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                zIndex: 40,
+                fontFamily: "'Inter', system-ui, sans-serif",
+                color: '#fff',
+            }}
+        >
             {/* Header */}
-            <div className="flex items-center justify-between p-4"
-                style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <div className="flex items-center gap-2">
-                    <Reply size={18} style={{ color: 'var(--accent)' }} />
-                    <h3 className="font-semibold text-sm">Thread</h3>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '16px 20px',
+                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Reply size={16} style={{ color: '#fff' }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#737373' }}>
+                        Thread
+                    </span>
                 </div>
-                <button onClick={closeThread} className="btn btn-icon btn-ghost" style={{ padding: '0.25rem' }}>
+                <button
+                    onClick={closeThread}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#737373',
+                        cursor: 'pointer',
+                        padding: 4,
+                        borderRadius: 8,
+                        display: 'flex',
+                        alignItems: 'center',
+                    }}
+                >
                     <X size={18} />
                 </button>
             </div>
 
             {/* Parent message */}
             {parentMessage && (
-                <div className="px-4 py-3" style={{ borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
-                    <div className="flex items-center gap-2 mb-1">
-                        <div className="avatar avatar-sm">
+                <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <div
+                            style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 8,
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 12,
+                                fontWeight: 600,
+                            }}
+                        >
                             {parentMessage.author?.display_name?.charAt(0).toUpperCase() || '?'}
                         </div>
-                        <span className="text-sm font-medium">{parentMessage.author?.display_name}</span>
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{parentMessage.author?.display_name}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#525252' }}>
                             {format(new Date(parentMessage.created_at), 'h:mm a')}
                         </span>
                     </div>
-                    <p className="text-sm ml-10" style={{ color: 'var(--text-secondary)' }}>
+                    <p style={{ fontSize: 13, color: '#a3a3a3', marginLeft: 36, lineHeight: 1.5 }}>
                         {parentMessage.content}
                     </p>
                 </div>
             )}
 
             {/* Thread replies */}
-            <div className="flex-1 overflow-y-auto px-4 py-3">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
                 {threadMessages.length === 0 ? (
-                    <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                        <p className="text-sm">No replies yet</p>
-                        <p className="text-xs mt-1">Be the first to reply</p>
+                    <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+                            No replies yet
+                        </p>
+                        <p style={{ fontSize: 10, color: '#404040', marginTop: 4 }}>
+                            Be the first to reply
+                        </p>
                     </div>
                 ) : (
                     threadMessages.map((reply: ThreadReply) => (
-                        <div key={reply.id} className="flex gap-3 py-2 animate-fade-in">
-                            <div className="avatar avatar-sm mt-0.5">
+                        <div key={reply.id} style={{ display: 'flex', gap: 12, padding: '8px 0' }}>
+                            <div
+                                style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 8,
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    flexShrink: 0,
+                                    marginTop: 2,
+                                }}
+                            >
                                 {reply.author?.display_name?.charAt(0).toUpperCase() || '?'}
                             </div>
                             <div>
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-sm font-semibold">{reply.author?.display_name}</span>
-                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 600 }}>{reply.author?.display_name}</span>
+                                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#525252' }}>
                                         {format(new Date(reply.created_at), 'h:mm a')}
                                     </span>
                                 </div>
-                                <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                                <p style={{ fontSize: 13, color: '#a3a3a3', marginTop: 2, lineHeight: 1.5 }}>
                                     {reply.content}
                                 </p>
                             </div>
@@ -108,20 +177,47 @@ export default function ThreadPanel() {
             </div>
 
             {/* Input */}
-            <div className="p-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-                <div className="flex items-end gap-2">
+            <div style={{ padding: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
                     <textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Reply in thread..."
-                        className="input flex-1 resize-none"
+                        placeholder="REPLY IN THREAD..."
+                        style={{
+                            flex: 1,
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 12,
+                            padding: '10px 14px',
+                            color: '#fff',
+                            fontSize: 13,
+                            outline: 'none',
+                            resize: 'none',
+                            minHeight: 40,
+                            maxHeight: 100,
+                            fontFamily: 'inherit',
+                            letterSpacing: '0.02em',
+                        }}
                         rows={1}
-                        style={{ minHeight: '40px', maxHeight: '100px', fontSize: '0.8125rem' }}
                     />
-                    <button onClick={handleSend} disabled={!input.trim()}
-                        className="btn btn-primary btn-icon"
-                        style={{ height: '40px', width: '40px', opacity: input.trim() ? 1 : 0.5 }}>
+                    <button
+                        onClick={handleSend}
+                        disabled={!input.trim()}
+                        style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 12,
+                            background: input.trim() ? 'linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%)' : 'rgba(255,255,255,0.05)',
+                            color: input.trim() ? '#000' : '#525252',
+                            border: 'none',
+                            cursor: input.trim() ? 'pointer' : 'default',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                        }}
+                    >
                         <Send size={16} />
                     </button>
                 </div>

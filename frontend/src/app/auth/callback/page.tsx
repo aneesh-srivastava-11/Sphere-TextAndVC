@@ -12,7 +12,6 @@ export default function AuthCallback() {
         const handleCallback = async () => {
             const { error } = await supabase.auth.getSession();
             if (error) {
-                console.error('Auth callback error:', error);
                 router.push('/login');
             } else {
                 router.push('/');
@@ -23,10 +22,22 @@ export default function AuthCallback() {
     }, [router]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
-            <div className="text-center animate-fade-in">
-                <Loader2 size={40} className="animate-spin mx-auto mb-4" style={{ color: 'var(--accent)' }} />
-                <p style={{ color: 'var(--text-secondary)' }}>Signing you in...</p>
+        <div
+            style={{
+                background: 'radial-gradient(circle at top center, #171717 0%, #000000 100%)',
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+                color: '#fff',
+            }}
+        >
+            <div style={{ textAlign: 'center' }}>
+                <Loader2 size={40} className="animate-spin mx-auto mb-4" style={{ color: '#fff' }} />
+                <p style={{ color: '#737373', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700 }}>
+                    Authenticating...
+                </p>
             </div>
         </div>
     );

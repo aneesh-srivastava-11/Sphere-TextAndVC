@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useCallStore } from '@/stores/callStore';
 import { useAuthStore } from '@/stores/authStore';
 import {
-    Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Monitor, MonitorOff, Users,
+    PhoneOff, Video, VideoOff, Mic, MicOff, Monitor, MonitorOff, Users,
 } from 'lucide-react';
 
 export default function CallView() {
@@ -26,41 +26,121 @@ export default function CallView() {
 
     const peerArray = Array.from(peers.values());
 
+    const controlBtn = (active: boolean, onClick: () => void, icon: React.ReactNode, danger?: boolean) => (
+        <button
+            onClick={onClick}
+            style={{
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                background: danger ? '#dc2626' : active ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${danger ? '#dc2626' : 'rgba(255,255,255,0.1)'}`,
+                color: danger ? '#fff' : active ? '#fff' : '#737373',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+            }}
+        >
+            {icon}
+        </button>
+    );
+
     return (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+        <div
+            style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 50,
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'radial-gradient(circle at top center, #171717 0%, #000000 100%)',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                color: '#fff',
+            }}
+        >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4"
-                style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'var(--success)' }} />
-                    <span className="font-semibold">Active Call</span>
-                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        <Users size={14} className="inline mr-1" />
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '16px 24px',
+                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.5)' }} />
+                    <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '0.05em' }}>ACTIVE CALL</span>
+                    <span style={{ color: '#737373', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Users size={14} />
                         {peerArray.length + 1} participant{peerArray.length !== 0 ? 's' : ''}
                     </span>
                 </div>
             </div>
 
             {/* Video grid */}
-            <div className="flex-1 p-6 overflow-hidden">
-                <div className="h-full grid gap-4"
+            <div style={{ flex: 1, padding: 24, overflow: 'hidden' }}>
+                <div
                     style={{
+                        height: '100%',
+                        display: 'grid',
+                        gap: 16,
                         gridTemplateColumns: peerArray.length === 0 ? '1fr' : peerArray.length <= 1 ? 'repeat(2, 1fr)' : peerArray.length <= 3 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
                         gridAutoRows: '1fr',
-                    }}>
+                    }}
+                >
                     {/* Local video */}
-                    <div className="relative rounded-2xl overflow-hidden flex items-center justify-center"
-                        style={{ background: 'var(--bg-tertiary)', border: '2px solid var(--accent)', minHeight: '200px' }}>
+                    <div
+                        style={{
+                            position: 'relative',
+                            borderRadius: 20,
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            minHeight: 200,
+                        }}
+                    >
                         {isCameraOn && localStream ? (
                             <video ref={localVideoRef} autoPlay muted playsInline
-                                className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
                         ) : (
-                            <div className="avatar avatar-lg">
+                            <div
+                                style={{
+                                    width: 64,
+                                    height: 64,
+                                    borderRadius: 16,
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: 24,
+                                    fontWeight: 700,
+                                }}
+                            >
                                 {user?.display_name?.charAt(0).toUpperCase()}
                             </div>
                         )}
-                        <div className="absolute bottom-3 left-3 px-3 py-1 rounded-lg text-xs font-medium"
-                            style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: 12,
+                                left: 12,
+                                padding: '4px 12px',
+                                borderRadius: 8,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                background: 'rgba(0,0,0,0.6)',
+                                backdropFilter: 'blur(8px)',
+                                letterSpacing: '0.1em',
+                                textTransform: 'uppercase',
+                            }}
+                        >
                             You {!isMicOn && '🔇'}
                         </div>
                     </div>
@@ -73,35 +153,20 @@ export default function CallView() {
             </div>
 
             {/* Controls */}
-            <div className="flex items-center justify-center gap-3 py-5"
-                style={{ borderTop: '1px solid var(--border-color)' }}>
-                <button onClick={toggleCamera}
-                    className={`btn btn-icon ${isCameraOn ? 'btn-secondary' : 'btn-danger'}`}
-                    style={{ width: '52px', height: '52px', borderRadius: '50%' }}
-                    title={isCameraOn ? 'Turn off camera' : 'Turn on camera'}>
-                    {isCameraOn ? <Video size={20} /> : <VideoOff size={20} />}
-                </button>
-
-                <button onClick={toggleMic}
-                    className={`btn btn-icon ${isMicOn ? 'btn-secondary' : 'btn-danger'}`}
-                    style={{ width: '52px', height: '52px', borderRadius: '50%' }}
-                    title={isMicOn ? 'Mute' : 'Unmute'}>
-                    {isMicOn ? <Mic size={20} /> : <MicOff size={20} />}
-                </button>
-
-                <button onClick={toggleScreenShare}
-                    className={`btn btn-icon ${isScreenSharing ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ width: '52px', height: '52px', borderRadius: '50%' }}
-                    title={isScreenSharing ? 'Stop sharing' : 'Share screen'}>
-                    {isScreenSharing ? <MonitorOff size={20} /> : <Monitor size={20} />}
-                </button>
-
-                <button onClick={leaveCall}
-                    className="btn btn-icon btn-danger"
-                    style={{ width: '52px', height: '52px', borderRadius: '50%' }}
-                    title="Leave call">
-                    <PhoneOff size={20} />
-                </button>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 12,
+                    padding: '20px 0',
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                }}
+            >
+                {controlBtn(isCameraOn, toggleCamera, isCameraOn ? <Video size={20} /> : <VideoOff size={20} />)}
+                {controlBtn(isMicOn, toggleMic, isMicOn ? <Mic size={20} /> : <MicOff size={20} />)}
+                {controlBtn(isScreenSharing, toggleScreenShare, isScreenSharing ? <MonitorOff size={20} /> : <Monitor size={20} />)}
+                {controlBtn(false, leaveCall, <PhoneOff size={20} />, true)}
             </div>
         </div>
     );
@@ -117,17 +182,54 @@ function PeerVideo({ peer }: { peer: { userId: string; socketId: string; stream?
     }, [peer.stream]);
 
     return (
-        <div className="relative rounded-2xl overflow-hidden flex items-center justify-center"
-            style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', minHeight: '200px' }}>
+        <div
+            style={{
+                position: 'relative',
+                borderRadius: 20,
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                minHeight: 200,
+            }}
+        >
             {peer.stream ? (
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-                <div className="avatar avatar-lg">
+                <div
+                    style={{
+                        width: 64,
+                        height: 64,
+                        borderRadius: 16,
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 24,
+                        fontWeight: 700,
+                    }}
+                >
                     {peer.userId.charAt(0).toUpperCase()}
                 </div>
             )}
-            <div className="absolute bottom-3 left-3 px-3 py-1 rounded-lg text-xs font-medium"
-                style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
+            <div
+                style={{
+                    position: 'absolute',
+                    bottom: 12,
+                    left: 12,
+                    padding: '4px 12px',
+                    borderRadius: 8,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(8px)',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                }}
+            >
                 Participant
             </div>
         </div>

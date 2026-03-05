@@ -27,30 +27,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     initialized: false,
 
     initialize: async () => {
+        // Prevent double initialization
+        if (get().initialized) return;
+
         try {
             const { data: { session } } = await supabase.auth.getSession();
 
             if (session) {
-                const user = await api.syncUser();
-                connectSocket(session.access_token);
-                set({ user, session, loading: false, initialized: true });
+                try {
+                    const user = await api.syncUser();
+                    connectSocket(session.access_token);
+                    set({ user, session, loading: false, initialized: true });
+                } catch {
+                    // Backend might be down but session is valid
+                    set({ loading: false, initialized: true });
+                }
             } else {
                 set({ loading: false, initialized: true });
             }
 
-            // Listen for auth changes
+            // Listen for auth changes (sign in/out from other tabs, etc.)
             supabase.auth.onAuthStateChange(async (event, session) => {
                 if (event === 'SIGNED_IN' && session) {
-                    const user = await api.syncUser();
-                    connectSocket(session.access_token);
-                    set({ user, session });
+                    try {
+                        const user = await api.syncUser();
+                        connectSocket(session.access_token);
+                        set({ user, session });
+                    } catch {
+                        // If sync fails, still set session so redirect works
+                        set({ session });
+                    }
                 } else if (event === 'SIGNED_OUT') {
                     disconnectSocket();
                     set({ user: null, session: null });
                 }
             });
-        } catch (err) {
-            console.error('Auth init error:', err);
+        } catch {
             set({ loading: false, initialized: true });
         }
     },
@@ -60,8 +72,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             email,
             password,
             options: {
-                // To auto-confirm if email confirmation is disabled in Supabase
-                // or to redirect back if enabled
                 emailRedirectTo: `${window.location.origin}/auth/callback`,
             },
         });
@@ -69,11 +79,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     signInWithPassword: async (email, password) => {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
         if (error) throw error;
+
+        // Directly sync user and set state — don't rely on onAuthStateChange
+        if (data.session) {
+            try {
+                const user = await api.syncUser();
+                connectSocket(data.session.access_token);
+                set({ user, session: data.session, loading: false, initialized: true });
+            } catch {
+                // Even if sync fails, set the session so the page can redirect
+                set({ session: data.session, loading: false, initialized: true });
+            }
+        }
     },
 
     signOut: async () => {

@@ -7,11 +7,16 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-    const { signInWithPassword, signUpWithEmail, user } = useAuthStore();
+    const { signInWithPassword, signUpWithEmail, user, initialize } = useAuthStore();
     const [loading, setLoading] = useState(false);
     const [isSignIn, setIsSignIn] = useState(true);
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
+
+    // Initialize auth store (sets up listeners) and redirect if already logged in
+    useEffect(() => {
+        initialize();
+    }, [initialize]);
 
     useEffect(() => {
         if (user) router.push('/');
@@ -33,12 +38,14 @@ export default function LoginPage() {
             if (isSignIn) {
                 await signInWithPassword(email, password);
                 toast.success('Signed in successfully');
+                // signInWithPassword now sets user directly, useEffect will redirect
+                // But also push explicitly as a backup
+                router.push('/');
             } else {
                 await signUpWithEmail(email, password);
                 toast.success('Account created! Please check your email to verify.');
             }
         } catch (err: any) {
-            console.error(err);
             toast.error(err.message || 'Authentication failed');
         } finally {
             setLoading(false);
