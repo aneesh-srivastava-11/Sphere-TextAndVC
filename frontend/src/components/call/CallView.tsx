@@ -59,6 +59,9 @@ export default function CallView() {
                 background: 'radial-gradient(circle at top center, #171717 0%, #000000 100%)',
                 fontFamily: "'Inter', system-ui, sans-serif",
                 color: '#fff',
+                height: '100dvh',
+                overflow: 'hidden',
+                touchAction: 'none'
             }}
         >
             {/* Header */}
@@ -169,7 +172,9 @@ export default function CallView() {
             >
                 {controlBtn(isCameraOn, toggleCamera, isCameraOn ? <Video size={20} /> : <VideoOff size={20} />)}
                 {controlBtn(isMicOn, toggleMic, isMicOn ? <Mic size={20} /> : <MicOff size={20} />)}
-                {controlBtn(isScreenSharing, toggleScreenShare, isScreenSharing ? <MonitorOff size={20} /> : <Monitor size={20} />)}
+                {typeof navigator !== 'undefined' && navigator.mediaDevices && (navigator.mediaDevices as any).getDisplayMedia &&
+                    controlBtn(isScreenSharing, toggleScreenShare, isScreenSharing ? <MonitorOff size={20} /> : <Monitor size={20} />)
+                }
                 {controlBtn(false, leaveCall, <PhoneOff size={20} />, true)}
             </div>
         </div>
@@ -237,7 +242,7 @@ function PeerVideo({ peer }: { peer: PeerConnection }) {
                     gap: 6
                 }}
             >
-                Participant {peer.isMicOn === false && <MicOff size={12} style={{ color: '#ef4444' }} />}
+                {peer.displayName || 'Participant'} {peer.isMicOn === false && <MicOff size={12} style={{ color: '#ef4444' }} />}
             </div>
         </div>
     );

@@ -2,14 +2,14 @@ import { supabase } from '../lib/supabase';
 import { BlockService } from './blockService';
 
 export class MessageService {
-    static async getMessages(conversationId: string, userId: string, limit = 50, before?: string) {
-        const blockedIds = await BlockService.getBlockedUserIds(userId);
+    static async getMessages(conversationId: string, internalId: string, supabaseUid: string, limit = 50, before?: string) {
+        const blockedIds = await BlockService.getBlockedUserIds(internalId);
 
         // Get cleared_at timestamp
         const { data: clearData } = await supabase
             .from('conversation_cleared')
             .select('cleared_at')
-            .eq('user_id', userId)
+            .eq('user_id', supabaseUid)
             .eq('conversation_id', conversationId)
             .single();
 
@@ -180,11 +180,11 @@ export class MessageService {
             .single();
     }
 
-    static async clearConversation(conversationId: string, userId: string) {
+    static async clearConversation(conversationId: string, supabaseUid: string) {
         return supabase
             .from('conversation_cleared')
             .upsert({
-                user_id: userId,
+                user_id: supabaseUid,
                 conversation_id: conversationId,
                 cleared_at: new Date().toISOString()
             });

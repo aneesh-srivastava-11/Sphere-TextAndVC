@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { CallSession, PeerConnection } from '@/types';
 import { api } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
+import { useAuthStore } from './authStore';
 import { createPeerConnection, getUserMedia, getDisplayMedia, addStreamTracks } from '@/lib/webrtc';
 
 interface CallState {
@@ -23,9 +24,10 @@ interface CallState {
     toggleMic: () => void;
     toggleScreenShare: () => Promise<void>;
 
-    handleUserJoined: (data: { userId: string; socketId: string; callId: string }) => Promise<void>;
+    handleUserJoined: (data: { userId: string; socketId: string; displayName: string; callId: string }) => Promise<void>;
+    handleParticipants: (data: { callId: string; participants: { userId: string; socketId: string; displayName: string }[] }) => Promise<void>;
     handleUserLeft: (data: { userId: string; callId: string }) => void;
-    handleOffer: (data: { offer: RTCSessionDescriptionInit; fromUserId: string; fromSocketId: string }) => Promise<void>;
+    handleOffer: (data: { offer: RTCSessionDescriptionInit; fromUserId: string; fromSocketId: string; fromDisplayName: string }) => Promise<void>;
     handleAnswer: (data: { answer: RTCSessionDescriptionInit; fromSocketId: string }) => void;
     handleIceCandidate: (data: { candidate: RTCIceCandidateInit; fromSocketId: string }) => void;
     handleStatusUpdate: (data: { userId: string; isMicOn: boolean; isCameraOn: boolean }) => void;
@@ -187,13 +189,26 @@ export const useCallStore = create<CallState>((set, get) => ({
             targetSocketId: data.socketId,
             offer,
             callId: data.callId,
+            fromDisplayName: useAuthStore.getState().user?.display_name || 'User'
         });
 
         set((state) => {
             const peers = new Map(state.peers);
-            peers.set(data.userId, { userId: data.userId, socketId: data.socketId, connection: pc });
+            peers.set(data.userId, {
+                userId: data.userId,
+                socketId: data.socketId,
+                displayName: data.displayName,
+                connection: pc
+            });
             return { peers };
         });
+    },
+
+    handleParticipants: async (data) => {
+        const { handleUserJoined } = get();
+        for (const p of data.participants) {
+            await handleUserJoined({ ...p, callId: data.callId });
+        }
     },
 
     handleUserLeft: (data) => {
@@ -252,6 +267,7 @@ export const useCallStore = create<CallState>((set, get) => ({
             peers.set(data.fromUserId, {
                 userId: data.fromUserId,
                 socketId: data.fromSocketId,
+                displayName: data.fromDisplayName,
                 connection: pc,
             });
             return { peers };

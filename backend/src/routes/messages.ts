@@ -17,6 +17,7 @@ router.get('/:conversationId', authMiddleware, async (req: AuthRequest, res) => 
         const { data, error } = await MessageService.getMessages(
             req.params.conversationId,
             req.user!.id,
+            req.user!.supabase_uid,
             limit ? parseInt(limit as string) : 50,
             before as string | undefined
         );
@@ -161,7 +162,7 @@ router.post('/:conversationId/clear', authMiddleware, async (req: AuthRequest, r
         const isParticipant = await ConversationService.isParticipant(req.params.conversationId, req.user!.id);
         if (!isParticipant) return res.status(403).json({ error: 'Not a participant' });
 
-        const { error } = await MessageService.clearConversation(req.params.conversationId, req.user!.id);
+        const { error } = await MessageService.clearConversation(req.params.conversationId, req.user!.supabase_uid);
         if (error) return res.status(500).json({ error: error.message });
         res.json({ success: true });
     } catch (err) {
