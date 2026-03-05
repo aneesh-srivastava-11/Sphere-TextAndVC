@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useConversationStore } from '@/stores/conversationStore';
 import { Conversation, Account } from '@/types';
 import { api } from '@/lib/api';
+import { useNicknameStore } from '@/stores/nicknameStore';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import ProfileModal from './ProfileModal';
 import { MessageSquare, Hash, Users, Plus, Search, LogOut, Globe, X, Settings } from 'lucide-react';
@@ -40,6 +41,7 @@ export default function Sidebar() {
     } = useConversationStore();
 
     const isMobile = useIsMobile();
+    const { getDisplayName } = useNicknameStore();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -105,7 +107,10 @@ export default function Sidebar() {
         if (conv.title) return conv.title;
         if (conv.type === 'direct') {
             const other = conv.participants?.find((p: Account) => p.id !== user?.id);
-            return other?.display_name || 'Direct Message';
+            if (other) {
+                return getDisplayName(other.id, other.display_name);
+            }
+            return 'Direct Message';
         }
         return 'Untitled';
     };
