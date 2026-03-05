@@ -12,17 +12,23 @@ import CenterPanel from '@/components/layout/CenterPanel';
 import RightPanel from '@/components/layout/RightPanel';
 import CallView from '@/components/call/CallView';
 import { Loader2 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export default function HomePage() {
   const { user, loading, initialized, initialize } = useAuthStore();
-  const { fetchConversations, fetchSpaces, activeConversation } = useConversationStore();
+  const { fetchConversations, fetchSpaces, activeConversation, setSidebarOpen } = useConversationStore();
   const { addMessage, updateMessage, removeMessage, updateReaction, addThreadReply, setTypingUser, clearTypingUser } = useMessageStore();
   const { isInCall, handleUserJoined, handleUserLeft, handleOffer, handleAnswer, handleIceCandidate } = useCallStore();
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile, setSidebarOpen]);
 
   useEffect(() => {
     if (initialized && !loading && !user) {

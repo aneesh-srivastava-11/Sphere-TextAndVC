@@ -155,4 +155,18 @@ router.post('/threads/:messageId', authMiddleware, async (req: AuthRequest, res)
     }
 });
 
+// Clear conversation locally
+router.post('/:conversationId/clear', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const isParticipant = await ConversationService.isParticipant(req.params.conversationId, req.user!.id);
+        if (!isParticipant) return res.status(403).json({ error: 'Not a participant' });
+
+        const { error } = await MessageService.clearConversation(req.params.conversationId, req.user!.id);
+        if (error) return res.status(500).json({ error: error.message });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to clear conversation' });
+    }
+});
+
 export default router;
