@@ -11,8 +11,13 @@ VALUES ('attachments', 'attachments', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. RLS Policies for Storage
--- Enable RLS
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Note: Supabase usually enables RLS on storage.objects by default.
+-- If you get an error that RLS is not enabled, please enable it in the Supabase Dashboard.
+
+-- Clean up existing policies to avoid "already exists" errors
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Upload" ON storage.objects;
+DROP POLICY IF EXISTS "Manage Own Uploads" ON storage.objects;
 
 -- Allow public read access to all objects in these buckets
 CREATE POLICY "Public Access"
