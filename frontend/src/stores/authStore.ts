@@ -14,8 +14,8 @@ interface AuthState {
     initialized: boolean;
 
     initialize: () => Promise<void>;
-    signInWithGoogle: () => Promise<void>;
-    signInWithEmail: (email: string) => Promise<void>;
+    signUpWithEmail: (email: string, password: string) => Promise<void>;
+    signInWithPassword: (email: string, password: string) => Promise<void>;
     signOut: () => Promise<void>;
     updateProfile: (data: Partial<Account>) => Promise<void>;
 }
@@ -55,18 +55,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
-    signInWithGoogle: async () => {
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: `${window.location.origin}/auth/callback` },
+    signUpWithEmail: async (email, password) => {
+        const { error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                // To auto-confirm if email confirmation is disabled in Supabase
+                // or to redirect back if enabled
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+            },
         });
+        if (error) throw error;
     },
 
-    signInWithEmail: async (email: string) => {
-        await supabase.auth.signInWithOtp({
+    signInWithPassword: async (email, password) => {
+        const { error } = await supabase.auth.signInWithPassword({
             email,
-            options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+            password,
         });
+        if (error) throw error;
     },
 
     signOut: async () => {

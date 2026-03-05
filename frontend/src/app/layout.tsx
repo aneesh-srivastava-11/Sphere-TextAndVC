@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   keywords: ["chat", "messaging", "teams", "communication", "video calls"],
 };
 
+import { Toaster } from "@/components/ui/sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,6 +24,7 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${inter.variable} font-sans antialiased`}>
         {children}
+        <Toaster theme="dark" position="bottom-right" />
       </body>
     </html>
   );

@@ -10,10 +10,13 @@ import { api } from '@/lib/api';
 import { Message, Account } from '@/types';
 import ThreadPanel from '@/components/message/ThreadPanel';
 import {
-    Send, Paperclip, Smile, Phone, MoreVertical, Hash, Users, MessageSquare,
-    Edit3, Trash2, Pin, Reply, AtSign, X, Loader2, ImageIcon, ArrowDown,
+    Send, Paperclip, Smile, Phone, Hash, Users, MessageSquare,
+    Edit3, Trash2, Pin, Reply, X, Loader2, ArrowDown,
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '🎉', '🔥', '👀', '💯', '✅', '👏', '🚀', '💡', '⭐', '🤔', '😮', '😢', '😡'];
 
@@ -53,12 +56,10 @@ export default function CenterPanel() {
     }, [messages]);
 
     // Scroll tracking
-    const handleScroll = useCallback(() => {
-        const el = scrollContainerRef.current;
-        if (el) {
-            const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-            setShowScrollDown(distFromBottom > 200);
-        }
+    const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+        const el = e.currentTarget;
+        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        setShowScrollDown(distFromBottom > 200);
     }, []);
 
     const scrollToBottom = () => {
@@ -142,10 +143,10 @@ export default function CenterPanel() {
 
     const getTypeIcon = () => {
         switch (activeConversation?.type) {
-            case 'direct': return <MessageSquare size={18} />;
-            case 'group': return <Users size={18} />;
-            case 'topic': return <Hash size={18} />;
-            default: return <MessageSquare size={18} />;
+            case 'direct': return <MessageSquare size={16} />;
+            case 'group': return <Users size={16} />;
+            case 'topic': return <Hash size={16} />;
+            default: return <MessageSquare size={16} />;
         }
     };
 
@@ -175,15 +176,14 @@ export default function CenterPanel() {
 
     if (!activeConversation) {
         return (
-            <div className="flex-1 flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
-                <div className="text-center animate-fade-in">
-                    <div className="w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-                        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
-                        <MessageSquare size={36} style={{ color: 'var(--text-muted)' }} />
+            <div className="flex-1 flex items-center justify-center bg-transparent relative overflow-hidden z-10 glass-card">
+                <div className="text-center animate-fade-in relative z-10">
+                    <div className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center bg-white/[0.03] border border-white/10 shadow-2xl glass-card">
+                        <MessageSquare size={32} className="text-white opacity-80" />
                     </div>
-                    <h2 className="text-xl font-semibold mb-2">Welcome to Sphere</h2>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        Select a conversation or start a new one
+                    <h2 className="text-3xl font-display font-bold mb-3 text-white tracking-tight">Select a conversation</h2>
+                    <p className="text-[11px] text-neutral-500 uppercase tracking-[0.2em] font-bold max-w-sm mx-auto">
+                        Connect with the ecosystem
                     </p>
                 </div>
             </div>
@@ -191,233 +191,222 @@ export default function CenterPanel() {
     }
 
     return (
-        <div className="flex-1 flex flex-col" style={{ background: 'var(--bg-primary)' }}>
+        <div className="flex-1 flex flex-col bg-transparent relative z-10 glass-card">
             {/* Header */}
-            <header className="glass-panel-strong flex items-center justify-between px-5 py-3 animate-fade-in"
-                style={{ borderBottom: '1px solid var(--border-color)' }}>
-                <div className="flex items-center gap-3">
-                    <span style={{ color: 'var(--accent)' }}>{getTypeIcon()}</span>
+            <header className="flex items-center justify-between px-6 py-4 glass-card border-b border-white/10 z-10">
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center text-white shadow-lg">
+                        {getTypeIcon()}
+                    </div>
                     <div>
-                        <h2 className="font-semibold text-base">{getConversationTitle()}</h2>
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <h2 className="font-semibold text-white tracking-wide">{getConversationTitle()}</h2>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-neutral-500">
                             {activeConversation.participants?.length || 0} members
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-1">
-                    <button onClick={() => startCall(activeConversation.id)} className="btn btn-icon btn-ghost" title="Start call">
-                        <Phone size={18} />
-                    </button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" onClick={() => startCall(activeConversation.id)} className="rounded-xl border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:text-white text-neutral-400 glass-card">
+                        <Phone size={16} />
+                    </Button>
                 </div>
             </header>
 
             {/* Messages */}
-            <div ref={scrollContainerRef} onScroll={handleScroll}
-                className="flex-1 overflow-y-auto px-5 py-4 relative">
+            <ScrollArea className="flex-1 px-6 py-4" onScrollCapture={handleScroll}>
                 {loading ? (
-                    <div className="flex items-center justify-center h-full">
-                        <Loader2 size={24} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                    <div className="flex items-center justify-center h-full pt-10">
+                        <Loader2 size={24} className="animate-spin text-white" />
                     </div>
                 ) : (
-                    groupedMessages.map(group => (
-                        <div key={group.date}>
-                            {/* Date separator */}
-                            <div className="flex items-center my-6">
-                                <div className="flex-1 h-px" style={{ background: 'var(--border-color)' }} />
-                                <span className="px-3 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                                    {formatDateHeader(group.messages[0].created_at)}
-                                </span>
-                                <div className="flex-1 h-px" style={{ background: 'var(--border-color)' }} />
-                            </div>
+                    <div className="max-w-4xl mx-auto">
+                        {groupedMessages.map(group => (
+                            <div key={group.date} className="pb-4">
+                                {/* Date separator */}
+                                <div className="flex items-center justify-center my-8 sticky top-2 z-10">
+                                    <span className="px-4 py-1.5 text-[10px] font-bold tracking-[0.2em] uppercase bg-black/80 backdrop-blur-md border border-white/10 rounded-full text-neutral-400 shadow-xl">
+                                        {formatDateHeader(group.messages[0].created_at)}
+                                    </span>
+                                </div>
 
-                            {group.messages.map((msg, i) => {
-                                const isOwn = msg.author_id === user?.id;
-                                const threadCount = msg.threads?.[0]?.count || 0;
-                                const reactionGroups = (msg.reactions || []).reduce<Record<string, { emoji: string; count: number; users: string[] }>>((acc, r) => {
-                                    if (!acc[r.emoji]) acc[r.emoji] = { emoji: r.emoji, count: 0, users: [] };
-                                    acc[r.emoji].count++;
-                                    acc[r.emoji].users.push(r.user_id);
-                                    return acc;
-                                }, {});
+                                {group.messages.map((msg, i) => {
+                                    const isOwn = msg.author_id === user?.id;
+                                    const threadCount = msg.threads?.[0]?.count || 0;
+                                    const reactionGroups = (msg.reactions || []).reduce<Record<string, { emoji: string; count: number; users: string[] }>>((acc, r) => {
+                                        if (!acc[r.emoji]) acc[r.emoji] = { emoji: r.emoji, count: 0, users: [] };
+                                        acc[r.emoji].count++;
+                                        acc[r.emoji].users.push(r.user_id);
+                                        return acc;
+                                    }, {});
 
-                                return (
-                                    <div
-                                        key={msg.id}
-                                        className="group flex gap-3 py-1.5 px-3 mx-[-12px] rounded-xl transition-colors duration-100 animate-fade-in"
-                                        style={{ background: hoveredMessage === msg.id ? 'var(--bg-secondary)' : 'transparent' }}
-                                        onMouseEnter={() => setHoveredMessage(msg.id)}
-                                        onMouseLeave={() => { setHoveredMessage(null); setShowEmojiPicker(null); }}
-                                    >
-                                        {/* Avatar */}
-                                        <div className="avatar avatar-sm mt-0.5 flex-shrink-0">
-                                            {msg.author?.avatar_url ? (
-                                                <img src={msg.author.avatar_url} alt="" />
-                                            ) : (
-                                                msg.author?.display_name?.charAt(0).toUpperCase() || '?'
-                                            )}
-                                        </div>
+                                    return (
+                                        <div
+                                            key={msg.id}
+                                            className={`group flex gap-4 py-3 px-4 -mx-4 rounded-2xl transition-all duration-300 ${hoveredMessage === msg.id ? 'bg-white/[0.02] border focus:border-white/10' : 'border border-transparent'}`}
+                                            onMouseEnter={() => setHoveredMessage(msg.id)}
+                                            onMouseLeave={() => { setHoveredMessage(null); setShowEmojiPicker(null); }}
+                                        >
+                                            <Avatar className="h-10 w-10 mt-1 flex-shrink-0 border border-white/10 bg-black shadow-lg">
+                                                <AvatarImage src={msg.author?.avatar_url || ''} />
+                                                <AvatarFallback className="text-white font-semibold text-sm">
+                                                    {msg.author?.display_name?.charAt(0).toUpperCase() || '?'}
+                                                </AvatarFallback>
+                                            </Avatar>
 
-                                        {/* Content */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-baseline gap-2">
-                                                <span className="font-semibold text-sm" style={{ color: msg._blocked ? 'var(--text-muted)' : 'var(--text-primary)' }}>
-                                                    {msg.author?.display_name || 'Unknown'}
-                                                </span>
-                                                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                                    {formatMessageTime(msg.created_at)}
-                                                    {msg.edited_at && <span className="ml-1">(edited)</span>}
-                                                </span>
-                                            </div>
-
-                                            <div className="text-sm mt-0.5 whitespace-pre-wrap break-words"
-                                                style={{ color: msg._blocked ? 'var(--text-muted)' : 'var(--text-secondary)', lineHeight: '1.5' }}
-                                                dangerouslySetInnerHTML={{
-                                                    __html: msg.content
-                                                        .replace(/@(\w+)/g, '<span class="mention">@$1</span>')
-                                                        .replace(/#(\w+)/g, '<span class="tag">#$1</span>')
-                                                }}
-                                            />
-
-                                            {/* File attachments */}
-                                            {msg.file_attachments && msg.file_attachments.length > 0 && (
-                                                <div className="flex flex-wrap gap-2 mt-2">
-                                                    {msg.file_attachments.map(file => (
-                                                        <a key={file.id} href={file.file_url} target="_blank" rel="noreferrer"
-                                                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
-                                                            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
-                                                            <Paperclip size={14} />
-                                                            {file.file_name}
-                                                        </a>
-                                                    ))}
+                                            <div className="flex-1 min-w-0 flex flex-col">
+                                                <div className="flex items-baseline gap-3 mb-1.5">
+                                                    <span className={`font-semibold text-[15px] ${msg._blocked ? 'text-neutral-600' : 'text-white'}`}>
+                                                        {msg.author?.display_name || 'Unknown'}
+                                                    </span>
+                                                    <span className="text-[10px] uppercase font-bold tracking-widest text-neutral-500">
+                                                        {formatMessageTime(msg.created_at)}
+                                                        {msg.edited_at && <span className="ml-2 font-medium">(edited)</span>}
+                                                    </span>
                                                 </div>
-                                            )}
 
-                                            {/* Reactions */}
-                                            {Object.keys(reactionGroups).length > 0 && (
-                                                <div className="flex flex-wrap gap-1.5 mt-2">
-                                                    {Object.values(reactionGroups).map(r => (
-                                                        <button
-                                                            key={r.emoji}
-                                                            onClick={() => handleReaction(msg.id, r.emoji)}
-                                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors"
-                                                            style={{
-                                                                background: r.users.includes(user?.id || '') ? 'var(--accent-glow)' : 'var(--bg-elevated)',
-                                                                border: `1px solid ${r.users.includes(user?.id || '') ? 'var(--accent)' : 'var(--border-color)'}`,
-                                                            }}
-                                                        >
-                                                            {r.emoji} {r.count}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
+                                                <div className={`text-[15px] whitespace-pre-wrap break-words leading-relaxed ${msg._blocked ? 'text-neutral-600 italic' : 'text-neutral-300'}`}
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: msg.content
+                                                            .replace(/@(\w+)/g, '<span class="text-white bg-white/10 px-1 rounded-md font-medium border border-white/20">@$1</span>')
+                                                            .replace(/#(\w+)/g, '<span class="text-white font-semibold underline decoration-white/30 underline-offset-2">#$1</span>')
+                                                    }}
+                                                />
 
-                                            {/* Thread count */}
-                                            {threadCount > 0 && (
-                                                <button onClick={() => openThread(msg.id)}
-                                                    className="flex items-center gap-1.5 mt-2 text-xs font-medium"
-                                                    style={{ color: 'var(--accent)' }}>
-                                                    <Reply size={14} />
-                                                    {threadCount} {threadCount === 1 ? 'reply' : 'replies'}
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* Action buttons (on hover) */}
-                                        {hoveredMessage === msg.id && !msg._blocked && (
-                                            <div className="flex items-start gap-0.5 flex-shrink-0 animate-fade-in">
-                                                <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
-                                                    className="btn btn-icon btn-ghost" style={{ padding: '0.25rem' }} title="React">
-                                                    <Smile size={16} />
-                                                </button>
-                                                <button onClick={() => openThread(msg.id)}
-                                                    className="btn btn-icon btn-ghost" style={{ padding: '0.25rem' }} title="Reply in thread">
-                                                    <Reply size={16} />
-                                                </button>
-                                                {isOwn && (
-                                                    <>
-                                                        <button onClick={() => { setEditingMessage(msg); setInput(msg.content); }}
-                                                            className="btn btn-icon btn-ghost" style={{ padding: '0.25rem' }} title="Edit">
-                                                            <Edit3 size={16} />
-                                                        </button>
-                                                        <button onClick={() => handleDelete(msg.id)}
-                                                            className="btn btn-icon btn-ghost" style={{ padding: '0.25rem', color: 'var(--danger)' }} title="Delete">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </>
+                                                {/* File attachments */}
+                                                {msg.file_attachments && msg.file_attachments.length > 0 && (
+                                                    <div className="flex flex-wrap gap-2 mt-3">
+                                                        {msg.file_attachments.map(file => (
+                                                            <a key={file.id} href={file.file_url} target="_blank" rel="noreferrer"
+                                                                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all text-neutral-300">
+                                                                <Paperclip size={14} className="text-neutral-500" />
+                                                                {file.file_name}
+                                                            </a>
+                                                        ))}
+                                                    </div>
                                                 )}
-                                                <button onClick={() => handlePin(msg.id)}
-                                                    className="btn btn-icon btn-ghost" style={{ padding: '0.25rem' }} title="Pin">
-                                                    <Pin size={16} />
-                                                </button>
-                                            </div>
-                                        )}
 
-                                        {/* Emoji picker */}
-                                        {showEmojiPicker === msg.id && (
-                                            <div className="absolute right-8 mt-8 p-2 rounded-xl z-20 glass-panel-strong animate-fade-in"
-                                                style={{ width: '280px' }}>
-                                                <div className="emoji-grid">
-                                                    {EMOJI_LIST.map(emoji => (
-                                                        <button key={emoji} className="emoji-btn" onClick={() => handleReaction(msg.id, emoji)}>
-                                                            {emoji}
-                                                        </button>
-                                                    ))}
+                                                {/* Meta Row: Reactions & Replies */}
+                                                {(Object.keys(reactionGroups).length > 0 || threadCount > 0) && (
+                                                    <div className="flex flex-wrap items-center gap-2 mt-3">
+                                                        {Object.values(reactionGroups).map(r => (
+                                                            <button
+                                                                key={r.emoji}
+                                                                onClick={() => handleReaction(msg.id, r.emoji)}
+                                                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${r.users.includes(user?.id || '')
+                                                                        ? 'bg-white/10 border border-white/20 text-white'
+                                                                        : 'bg-white/[0.03] border border-white/10 text-neutral-400 hover:bg-white/[0.08]'
+                                                                    }`}
+                                                            >
+                                                                <span>{r.emoji}</span>
+                                                                <span className="font-bold">{r.count}</span>
+                                                            </button>
+                                                        ))}
+
+                                                        {threadCount > 0 && (
+                                                            <button onClick={() => openThread(msg.id)}
+                                                                className="flex items-center gap-1.5 px-3 py-1 bg-white/[0.03] hover:bg-white/[0.08] rounded-full text-[11px] font-bold uppercase tracking-wide text-white transition-colors border border-white/10">
+                                                                <Reply size={13} />
+                                                                {threadCount} {threadCount === 1 ? 'REPLY' : 'REPLIES'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Action buttons (on hover) */}
+                                            {hoveredMessage === msg.id && !msg._blocked && (
+                                                <div className="absolute right-6 -top-4 flex items-center bg-black/80 backdrop-blur-md border border-white/10 shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                    <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
+                                                        className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors" title="React">
+                                                        <Smile size={16} />
+                                                    </button>
+                                                    <button onClick={() => openThread(msg.id)}
+                                                        className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors" title="Reply in thread">
+                                                        <Reply size={16} />
+                                                    </button>
+                                                    {isOwn && (
+                                                        <>
+                                                            <button onClick={() => { setEditingMessage(msg); setInput(msg.content); }}
+                                                                className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors" title="Edit">
+                                                                <Edit3 size={16} />
+                                                            </button>
+                                                            <button onClick={() => handleDelete(msg.id)}
+                                                                className="p-2 text-neutral-500 hover:text-white hover:bg-[#ff3333]/20 hover:text-[#ff3333] transition-colors" title="Delete">
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    <button onClick={() => handlePin(msg.id)}
+                                                        className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors" title="Pin">
+                                                        <Pin size={16} />
+                                                    </button>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ))
-                )}
-                <div ref={messagesEndRef} />
+                                            )}
 
-                {showScrollDown && (
-                    <button onClick={scrollToBottom}
-                        className="fixed bottom-28 right-1/2 translate-x-1/2 btn btn-primary btn-icon shadow-lg z-10"
-                        style={{ borderRadius: '50%', padding: '0.75rem' }}>
-                        <ArrowDown size={16} />
-                    </button>
-                )}
-            </div>
-
-            {/* Input */}
-            <div className="px-5 py-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-                {editingMessage && (
-                    <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg text-sm"
-                        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--accent-glow)' }}>
-                        <Edit3 size={14} style={{ color: 'var(--accent)' }} />
-                        <span style={{ color: 'var(--text-secondary)' }}>Editing message</span>
-                        <button onClick={() => { setEditingMessage(null); setInput(''); }} className="ml-auto">
-                            <X size={14} />
-                        </button>
+                                            {/* Emoji picker */}
+                                            {showEmojiPicker === msg.id && (
+                                                <div className="absolute right-0 top-10 p-3 rounded-2xl bg-[#0a0a0a] border border-white/10 shadow-2xl z-20 w-[280px] glass-card">
+                                                    <div className="grid grid-cols-8 gap-2">
+                                                        {EMOJI_LIST.map(emoji => (
+                                                            <button key={emoji} className="w-8 h-8 flex items-center justify-center text-xl hover:bg-white/10 rounded-lg transition-colors" onClick={() => handleReaction(msg.id, emoji)}>
+                                                                {emoji}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                        <div ref={messagesEndRef} className="h-4" />
                     </div>
                 )}
-                <div className="flex items-end gap-2">
-                    <div className="flex-1 relative">
+            </ScrollArea>
+
+            {showScrollDown && (
+                <button onClick={scrollToBottom}
+                    className="absolute bottom-28 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-xl hover:bg-white/20 text-white rounded-full p-2.5 shadow-2xl z-10 border border-white/20 transition-all">
+                    <ArrowDown size={18} />
+                </button>
+            )}
+
+            {/* Input */}
+            <div className="p-6 bg-transparent border-t border-white/10 glass-card">
+                <div className="max-w-4xl mx-auto relative rounded-2xl bg-white/[0.03] border border-white/10 focus-within:border-white/20 focus-within:bg-white/[0.05] transition-all duration-300 shadow-lg input-glow">
+                    {editingMessage && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] border-b border-white/10 rounded-t-2xl text-[11px] font-bold tracking-widest uppercase">
+                            <Edit3 size={12} className="text-white" />
+                            <span className="text-neutral-400">Editing message</span>
+                            <button onClick={() => { setEditingMessage(null); setInput(''); }} className="ml-auto text-neutral-500 hover:text-white transition-colors">
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
+                    <div className="flex items-end gap-2 p-2">
                         <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="Type a message..."
-                            className="input resize-none"
+                            placeholder="TRANSMIT MESSAGE..."
+                            className="flex-1 bg-transparent border-0 focus:ring-0 text-white placeholder:text-neutral-600 placeholder:text-xs placeholder:tracking-widest placeholder:uppercase placeholder:font-bold resize-none p-3 max-h-[150px] min-h-[48px] outline-none"
                             rows={1}
-                            style={{
-                                paddingRight: '3rem',
-                                minHeight: '44px',
-                                maxHeight: '120px',
-                            }}
                         />
+                        <div className="flex items-center gap-1 p-1">
+                            <Button variant="ghost" size="icon" className="text-neutral-500 hover:text-white hover:bg-white/10 rounded-xl transition-all h-10 w-10">
+                                <Paperclip size={18} />
+                            </Button>
+                            <Button
+                                onClick={handleSend}
+                                disabled={!input.trim()}
+                                size="icon"
+                                className={`rounded-xl h-10 w-10 transition-all duration-300 ${input.trim() ? 'mono-gradient-btn text-black shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:scale-105 hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]' : 'bg-white/5 text-neutral-600'}`}
+                            >
+                                <Send size={16} className={input.trim() ? 'translate-x-0.5 -translate-y-0.5' : ''} />
+                            </Button>
+                        </div>
                     </div>
-                    <button
-                        onClick={handleSend}
-                        disabled={!input.trim()}
-                        className="btn btn-primary btn-icon"
-                        style={{ height: '44px', width: '44px', borderRadius: '0.75rem', opacity: input.trim() ? 1 : 0.5 }}
-                    >
-                        <Send size={18} />
-                    </button>
                 </div>
             </div>
 

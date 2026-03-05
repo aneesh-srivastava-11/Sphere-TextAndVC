@@ -5,9 +5,12 @@ import { useAuthStore } from '@/stores/authStore';
 import { useConversationStore } from '@/stores/conversationStore';
 import { Conversation, Account } from '@/types';
 import { api } from '@/lib/api';
-import {
-    MessageSquare, Hash, Users, Plus, Search, LogOut, Settings, Globe, ChevronDown,
-} from 'lucide-react';
+import { MessageSquare, Hash, Users, Plus, Search, LogOut, Globe } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function Sidebar() {
     const { user, signOut } = useAuthStore();
@@ -18,7 +21,7 @@ export default function Sidebar() {
     } = useConversationStore();
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
     const [createType, setCreateType] = useState<'dm' | 'group' | 'space'>('dm');
     const [searchResults, setSearchResults] = useState<Account[]>([]);
     const [selectedUsers, setSelectedUsers] = useState<Account[]>([]);
@@ -46,7 +49,7 @@ export default function Sidebar() {
             const conv = await api.createDM(targetUser.id);
             await fetchConversations();
             setActiveConversation(conv);
-            setShowCreateModal(false);
+            setCreateModalOpen(false);
         } catch (err) {
             console.error(err);
         }
@@ -58,7 +61,7 @@ export default function Sidebar() {
             const conv = await api.createGroup(groupTitle, selectedUsers.map(u => u.id));
             await fetchConversations();
             setActiveConversation(conv);
-            setShowCreateModal(false);
+            setCreateModalOpen(false);
             setGroupTitle('');
             setSelectedUsers([]);
         } catch (err) {
@@ -72,7 +75,7 @@ export default function Sidebar() {
             await api.createSpace(spaceName, spaceDesc);
             const { fetchSpaces } = useConversationStore.getState();
             await fetchSpaces();
-            setShowCreateModal(false);
+            setCreateModalOpen(false);
             setSpaceName('');
             setSpaceDesc('');
         } catch (err) {
@@ -99,269 +102,269 @@ export default function Sidebar() {
     };
 
     return (
-        <>
-            <aside
-                className="glass-panel-strong flex flex-col h-full animate-slide-left"
-                style={{ width: '320px', minWidth: '320px', borderRight: '1px solid var(--border-color)' }}
-            >
-                {/* Header */}
-                <div className="p-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}>
-                            <Globe size={16} color="white" />
+        <aside className="flex flex-col h-full bg-transparent border-r border-white/10 transition-all duration-300 w-80 relative z-10 glass-card">
+            {/* Header */}
+            <div className="p-4 flex items-center justify-between border-b border-white/10">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-white/[0.05] border border-white/10 shadow-lg">
+                        <Globe size={16} className="text-white" />
+                    </div>
+                    <span className="font-display font-bold text-lg text-white tracking-tight">Sphere</span>
+                </div>
+
+                <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="hover:bg-white/5 rounded-full text-neutral-400 hover:text-white transition-colors">
+                            <Plus size={20} />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md bg-[#0a0a0a] border border-white/10 text-white glass-card shadow-2xl">
+                        <DialogHeader>
+                            <DialogTitle className="font-display text-xl tracking-tight">New Conversation</DialogTitle>
+                            <DialogDescription className="text-neutral-500 font-medium tracking-wide">
+                                Create a direct message, group chat, or a new space.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="flex gap-2 mb-4 bg-white/[0.02] border border-white/5 p-1 rounded-xl glass-card">
+                            {[
+                                { key: 'dm' as const, label: 'Direct', icon: MessageSquare },
+                                { key: 'group' as const, label: 'Group', icon: Users },
+                                { key: 'space' as const, label: 'Space', icon: Globe },
+                            ].map(({ key, label, icon: Icon }) => (
+                                <Button
+                                    key={key}
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`flex-1 rounded-lg transition-all ${createType === key ? 'bg-white/[0.08] text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.03]'}`}
+                                    onClick={() => setCreateType(key)}
+                                >
+                                    <Icon size={14} className="mr-2" /> {label}
+                                </Button>
+                            ))}
                         </div>
-                        <span className="font-bold text-lg">Sphere</span>
-                    </div>
-                    <button onClick={() => setShowCreateModal(true)} className="btn btn-icon btn-ghost" title="New conversation">
-                        <Plus size={20} />
-                    </button>
-                </div>
 
-                {/* Tabs */}
-                <div className="flex p-2 gap-1" style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <button
-                        className={`btn btn-ghost flex-1 text-sm ${sidebarTab === 'conversations' ? 'font-semibold' : ''}`}
-                        style={sidebarTab === 'conversations' ? { background: 'var(--bg-elevated)', color: 'var(--text-primary)' } : {}}
-                        onClick={() => setSidebarTab('conversations')}
-                    >
-                        <MessageSquare size={16} /> Chats
-                    </button>
-                    <button
-                        className={`btn btn-ghost flex-1 text-sm ${sidebarTab === 'spaces' ? 'font-semibold' : ''}`}
-                        style={sidebarTab === 'spaces' ? { background: 'var(--bg-elevated)', color: 'var(--text-primary)' } : {}}
-                        onClick={() => setSidebarTab('spaces')}
-                    >
-                        <Globe size={16} /> Spaces
-                    </button>
-                </div>
+                        <div className="space-y-4">
+                            {createType === 'dm' && (
+                                <div>
+                                    <Input
+                                        type="text"
+                                        placeholder="Search users..."
+                                        className="bg-white/[0.03] border border-white/10 text-white placeholder:text-neutral-600 focus:outline-none input-glow transition-all duration-300"
+                                        onChange={(e) => handleSearchUsers(e.target.value)}
+                                    />
+                                    <ScrollArea className="max-h-60 mt-4 rounded-xl">
+                                        {searchResults.map(u => (
+                                            <Button
+                                                key={u.id}
+                                                variant="ghost"
+                                                className="w-full justify-start py-6 hover:bg-white/[0.05] rounded-xl transition-colors mb-1"
+                                                onClick={() => handleCreateDM(u)}
+                                            >
+                                                <Avatar className="h-8 w-8 mr-3 border border-white/10 bg-white/[0.02]">
+                                                    <AvatarFallback className="text-white text-xs">{u.display_name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="text-left flex-1 min-w-0">
+                                                    <p className="text-sm font-semibold text-white truncate">{u.display_name}</p>
+                                                    <p className="text-xs text-neutral-500 truncate">{u.email}</p>
+                                                </div>
+                                            </Button>
+                                        ))}
+                                    </ScrollArea>
+                                </div>
+                            )}
 
-                {/* Search */}
-                <div className="p-3">
-                    <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="input"
-                            style={{ paddingLeft: '2.25rem', fontSize: '0.8125rem' }}
-                        />
-                    </div>
-                </div>
+                            {createType === 'group' && (
+                                <div className="space-y-3">
+                                    <Input
+                                        type="text"
+                                        placeholder="Group name"
+                                        value={groupTitle}
+                                        onChange={(e) => setGroupTitle(e.target.value)}
+                                        className="bg-white/[0.03] border border-white/10 text-white placeholder:text-neutral-600 focus:outline-none input-glow transition-all duration-300"
+                                    />
+                                    <Input
+                                        type="text"
+                                        placeholder="Search users to add..."
+                                        className="bg-white/[0.03] border border-white/10 text-white placeholder:text-neutral-600 focus:outline-none input-glow transition-all duration-300"
+                                        onChange={(e) => handleSearchUsers(e.target.value)}
+                                    />
+                                    {selectedUsers.length > 0 && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedUsers.map(u => (
+                                                <span key={u.id} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-white/[0.05] border border-white/10 text-neutral-300 backdrop-blur-md">
+                                                    {u.display_name}
+                                                    <button onClick={() => setSelectedUsers(prev => prev.filter(p => p.id !== u.id))} className="ml-1 text-neutral-500 hover:text-white transition-colors">×</button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <ScrollArea className="max-h-40 rounded-xl">
+                                        {searchResults.filter(u => !selectedUsers.find(s => s.id === u.id)).map(u => (
+                                            <Button
+                                                key={u.id}
+                                                variant="ghost"
+                                                className="w-full justify-start hover:bg-white/[0.05] rounded-xl mb-1"
+                                                onClick={() => setSelectedUsers(prev => [...prev, u])}
+                                            >
+                                                <Avatar className="h-6 w-6 mr-3 border border-white/10 bg-white/[0.02]">
+                                                    <AvatarFallback className="text-[10px] text-white">{u.display_name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="text-sm font-medium text-neutral-300 truncate">{u.display_name}</span>
+                                            </Button>
+                                        ))}
+                                    </ScrollArea>
+                                    <button onClick={handleCreateGroup} disabled={!groupTitle || selectedUsers.length === 0} className="w-full mono-gradient-btn text-black font-bold py-3.5 rounded-xl hover:shadow-[0_0_30px_rgba(255,255,255,0.1)] active:scale-[0.99] transition-all duration-300 mt-4 text-xs uppercase tracking-widest disabled:opacity-50">
+                                        Create Group
+                                    </button>
+                                </div>
+                            )}
 
-                {/* List */}
-                <div className="flex-1 overflow-y-auto px-2 pb-2">
-                    {sidebarTab === 'conversations' ? (
-                        filteredConversations.length === 0 ? (
-                            <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                                <MessageSquare size={32} className="mx-auto mb-2 opacity-40" />
-                                <p className="text-sm">No conversations yet</p>
-                                <p className="text-xs mt-1">Start a new conversation</p>
-                            </div>
-                        ) : (
-                            filteredConversations.map(conv => (
+                            {createType === 'space' && (
+                                <div className="space-y-3">
+                                    <Input
+                                        type="text"
+                                        placeholder="Space name"
+                                        value={spaceName}
+                                        onChange={(e) => setSpaceName(e.target.value)}
+                                        className="bg-white/[0.03] border border-white/10 text-white placeholder:text-neutral-600 focus:outline-none input-glow transition-all duration-300"
+                                    />
+                                    <textarea
+                                        placeholder="Description (optional)"
+                                        value={spaceDesc}
+                                        onChange={(e) => setSpaceDesc(e.target.value)}
+                                        className="flex min-h-[100px] w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-neutral-600 focus:outline-none input-glow transition-all duration-300 resize-none"
+                                    />
+                                    <button onClick={handleCreateSpace} disabled={!spaceName} className="w-full mono-gradient-btn text-black font-bold py-3.5 rounded-xl hover:shadow-[0_0_30px_rgba(255,255,255,0.1)] active:scale-[0.99] transition-all duration-300 mt-4 text-xs uppercase tracking-widest disabled:opacity-50">
+                                        Create Space
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex p-3 gap-2 border-b border-white/10 bg-black/20 backdrop-blur-md">
+                <button
+                    className={`flex-1 flex items-center justify-center py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${sidebarTab === 'conversations' ? 'bg-white/[0.08] text-white shadow-sm border border-white/5' : 'text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.03]'}`}
+                    onClick={() => setSidebarTab('conversations')}
+                >
+                    <MessageSquare size={14} className="mr-2 opacity-70" /> CHATS
+                </button>
+                <button
+                    className={`flex-1 flex items-center justify-center py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${sidebarTab === 'spaces' ? 'bg-white/[0.08] text-white shadow-sm border border-white/5' : 'text-neutral-500 hover:text-neutral-300 hover:bg-white/[0.03]'}`}
+                    onClick={() => setSidebarTab('spaces')}
+                >
+                    <Globe size={14} className="mr-2 opacity-70" /> SPACES
+                </button>
+            </div>
+
+            {/* Search */}
+            <div className="p-4">
+                <div className="relative group">
+                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 group-focus-within:text-white transition-colors" />
+                    <input
+                        type="text"
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder:text-neutral-600 focus:outline-none input-glow transition-all duration-300"
+                    />
+                </div>
+            </div>
+
+            {/* List */}
+            <ScrollArea className="flex-1 px-3">
+                {sidebarTab === 'conversations' ? (
+                    filteredConversations.length === 0 ? (
+                        <div className="text-center py-12 opacity-50">
+                            <MessageSquare size={32} className="mx-auto mb-4 text-neutral-600" />
+                            <p className="text-xs uppercase tracking-widest font-bold text-neutral-500">No conversations</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-1.5 pb-4">
+                            {filteredConversations.map(conv => (
                                 <button
                                     key={conv.id}
                                     onClick={() => setActiveConversation(conv)}
-                                    className="w-full flex items-center gap-3 p-3 rounded-xl mb-1 transition-all duration-150 text-left"
-                                    style={{
-                                        background: activeConversation?.id === conv.id ? 'var(--bg-elevated)' : 'transparent',
-                                        borderLeft: activeConversation?.id === conv.id ? '3px solid var(--accent)' : '3px solid transparent',
-                                    }}
+                                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all duration-200 text-left border ${activeConversation?.id === conv.id ? 'bg-white/[0.08] border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.03)]' : 'border-transparent hover:bg-white/[0.04]'}`}
                                 >
-                                    <div className="avatar avatar-sm" style={conv.type === 'group' ? { background: 'linear-gradient(135deg, #059669, #10b981)' } : conv.type === 'topic' ? { background: 'linear-gradient(135deg, #d97706, #f59e0b)' } : {}}>
-                                        {conv.avatar_url ? <img src={conv.avatar_url} alt="" /> : getConversationName(conv).charAt(0).toUpperCase()}
-                                    </div>
+                                    <Avatar className="h-10 w-10 border border-white/10 bg-black">
+                                        <AvatarImage src={conv.avatar_url || ''} />
+                                        <AvatarFallback className="text-white font-medium text-sm">
+                                            {getConversationName(conv).charAt(0)}
+                                        </AvatarFallback>
+                                    </Avatar>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="opacity-60">{getConversationIcon(conv.type)}</span>
-                                            <span className="font-medium text-sm truncate">{getConversationName(conv)}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-neutral-500">{getConversationIcon(conv.type)}</span>
+                                            <span className={`font-semibold text-sm truncate ${activeConversation?.id === conv.id ? 'text-white' : 'text-neutral-300'}`}>{getConversationName(conv)}</span>
                                         </div>
-                                        <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                                            {conv.participants?.length || 0} members
+                                        <p className="text-[11px] text-neutral-500 truncate mt-1 tracking-wide">
+                                            {conv.participants?.length || 0} MEMBERS
                                         </p>
                                     </div>
+                                    {activeConversation?.id === conv.id && (
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_5px_rgba(255,255,255,0.8)]" />
+                                    )}
                                 </button>
-                            ))
-                        )
+                            ))}
+                        </div>
+                    )
+                ) : (
+                    /* Spaces tab */
+                    spaces.length === 0 ? (
+                        <div className="text-center py-12 opacity-50">
+                            <Globe size={32} className="mx-auto mb-4 text-neutral-600" />
+                            <p className="text-xs uppercase tracking-widest font-bold text-neutral-500">No spaces</p>
+                        </div>
                     ) : (
-                        /* Spaces tab */
-                        spaces.length === 0 ? (
-                            <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
-                                <Globe size={32} className="mx-auto mb-2 opacity-40" />
-                                <p className="text-sm">No spaces yet</p>
-                            </div>
-                        ) : (
-                            spaces.map(space => (
+                        <div className="space-y-1.5 pb-4">
+                            {spaces.map(space => (
                                 <button
                                     key={space.id}
                                     onClick={async () => {
                                         setActiveSpace(space);
                                         await loadSpace(space.id);
                                     }}
-                                    className="w-full flex items-center gap-3 p-3 rounded-xl mb-1 transition-all duration-150 text-left"
-                                    style={{
-                                        background: activeSpace?.id === space.id ? 'var(--bg-elevated)' : 'transparent',
-                                        borderLeft: activeSpace?.id === space.id ? '3px solid var(--accent)' : '3px solid transparent',
-                                    }}
+                                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all duration-200 text-left border ${activeSpace?.id === space.id ? 'bg-white/[0.08] border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.03)]' : 'border-transparent hover:bg-white/[0.04]'}`}
                                 >
-                                    <div className="avatar avatar-sm" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>
-                                        {space.name.charAt(0).toUpperCase()}
-                                    </div>
+                                    <Avatar className="h-10 w-10 border border-white/10 bg-white/[0.02]">
+                                        <AvatarFallback className="text-white font-medium">
+                                            {space.name.charAt(0)}
+                                        </AvatarFallback>
+                                    </Avatar>
                                     <div className="flex-1 min-w-0">
-                                        <span className="font-medium text-sm truncate block">{space.name}</span>
+                                        <span className={`font-semibold text-sm truncate block ${activeSpace?.id === space.id ? 'text-white' : 'text-neutral-300'}`}>{space.name}</span>
                                         {space.description && (
-                                            <p className="text-xs truncate mt-0.5" style={{ color: 'var(--text-muted)' }}>{space.description}</p>
+                                            <p className="text-[11px] text-neutral-500 truncate mt-1 tracking-wide">{space.description}</p>
                                         )}
                                     </div>
                                 </button>
-                            ))
-                        )
-                    )}
-                </div>
-
-                {/* User footer */}
-                <div className="p-3 flex items-center gap-3" style={{ borderTop: '1px solid var(--border-color)' }}>
-                    <div className="avatar avatar-sm relative">
-                        {user?.avatar_url ? <img src={user.avatar_url} alt="" /> : user?.display_name?.charAt(0).toUpperCase()}
-                        <div className="online-dot" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{user?.display_name}</p>
-                        <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{user?.email}</p>
-                    </div>
-                    <button onClick={signOut} className="btn btn-icon btn-ghost" title="Sign out">
-                        <LogOut size={16} />
-                    </button>
-                </div>
-            </aside>
-
-            {/* Create Modal */}
-            {showCreateModal && (
-                <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <h2 className="text-lg font-bold mb-4">New Conversation</h2>
-
-                        {/* Type tabs */}
-                        <div className="flex gap-2 mb-4">
-                            {[
-                                { key: 'dm' as const, label: 'Direct Message', icon: MessageSquare },
-                                { key: 'group' as const, label: 'Group', icon: Users },
-                                { key: 'space' as const, label: 'Space', icon: Globe },
-                            ].map(({ key, label, icon: Icon }) => (
-                                <button
-                                    key={key}
-                                    className={`btn btn-ghost flex-1 text-xs`}
-                                    style={createType === key ? { background: 'var(--bg-elevated)', color: 'var(--accent)' } : {}}
-                                    onClick={() => setCreateType(key)}
-                                >
-                                    <Icon size={14} /> {label}
-                                </button>
                             ))}
                         </div>
+                    )
+                )}
+            </ScrollArea>
 
-                        {createType === 'dm' && (
-                            <div>
-                                <input
-                                    type="text"
-                                    placeholder="Search users..."
-                                    className="input mb-3"
-                                    onChange={(e) => handleSearchUsers(e.target.value)}
-                                />
-                                <div className="max-h-60 overflow-y-auto">
-                                    {searchResults.map(u => (
-                                        <button
-                                            key={u.id}
-                                            onClick={() => handleCreateDM(u)}
-                                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--bg-elevated)] transition-colors"
-                                        >
-                                            <div className="avatar avatar-sm">{u.display_name.charAt(0).toUpperCase()}</div>
-                                            <div className="text-left">
-                                                <p className="text-sm font-medium">{u.display_name}</p>
-                                                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{u.email}</p>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {createType === 'group' && (
-                            <div>
-                                <input
-                                    type="text"
-                                    placeholder="Group name"
-                                    value={groupTitle}
-                                    onChange={(e) => setGroupTitle(e.target.value)}
-                                    className="input mb-3"
-                                />
-                                <input
-                                    type="text"
-                                    placeholder="Search users to add..."
-                                    className="input mb-3"
-                                    onChange={(e) => handleSearchUsers(e.target.value)}
-                                />
-                                {selectedUsers.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 mb-3">
-                                        {selectedUsers.map(u => (
-                                            <span key={u.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
-                                                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-color)' }}>
-                                                {u.display_name}
-                                                <button onClick={() => setSelectedUsers(prev => prev.filter(p => p.id !== u.id))} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                                <div className="max-h-40 overflow-y-auto mb-3">
-                                    {searchResults.filter(u => !selectedUsers.find(s => s.id === u.id)).map(u => (
-                                        <button
-                                            key={u.id}
-                                            onClick={() => setSelectedUsers(prev => [...prev, u])}
-                                            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--bg-elevated)] transition-colors"
-                                        >
-                                            <div className="avatar avatar-sm">{u.display_name.charAt(0).toUpperCase()}</div>
-                                            <span className="text-sm">{u.display_name}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                                <button onClick={handleCreateGroup} className="btn btn-primary w-full"
-                                    disabled={!groupTitle || selectedUsers.length === 0}>
-                                    Create Group
-                                </button>
-                            </div>
-                        )}
-
-                        {createType === 'space' && (
-                            <div>
-                                <input
-                                    type="text"
-                                    placeholder="Space name"
-                                    value={spaceName}
-                                    onChange={(e) => setSpaceName(e.target.value)}
-                                    className="input mb-3"
-                                />
-                                <textarea
-                                    placeholder="Description (optional)"
-                                    value={spaceDesc}
-                                    onChange={(e) => setSpaceDesc(e.target.value)}
-                                    className="input mb-3"
-                                    rows={3}
-                                    style={{ resize: 'none' }}
-                                />
-                                <button onClick={handleCreateSpace} className="btn btn-primary w-full" disabled={!spaceName}>
-                                    Create Space
-                                </button>
-                            </div>
-                        )}
-
-                        <button onClick={() => setShowCreateModal(false)} className="btn btn-ghost w-full mt-3 text-sm">
-                            Cancel
-                        </button>
+            {/* User footer */}
+            <div className="p-4 bg-black/40 border-t border-white/10 backdrop-blur-md">
+                <div className="flex items-center gap-3 p-2 rounded-xl border border-transparent hover:border-white/5 hover:bg-white/[0.03] transition-colors">
+                    <Avatar className="h-9 w-9 border border-white/10 bg-[#0a0a0a]">
+                        <AvatarImage src={user?.avatar_url || ''} />
+                        <AvatarFallback className="text-white text-sm font-semibold">{user?.display_name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white truncate leading-none mb-1">{user?.display_name}</p>
+                        <p className="text-[10px] uppercase tracking-widest text-neutral-500 truncate">{user?.email}</p>
                     </div>
+                    <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8 rounded-full text-neutral-500 hover:text-white hover:bg-white/10 transition-colors">
+                        <LogOut size={16} />
+                    </Button>
                 </div>
-            )}
-        </>
+            </div>
+        </aside>
     );
 }

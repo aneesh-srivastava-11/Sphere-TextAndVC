@@ -92,10 +92,11 @@ export default function HomePage() {
 
   if (!initialized || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
-        <div className="text-center animate-fade-in">
-          <Loader2 size={40} className="animate-spin mx-auto mb-4" style={{ color: 'var(--accent)' }} />
-          <p style={{ color: 'var(--text-secondary)' }}>Loading Sphere...</p>
+      <div className="min-h-screen flex items-center justify-center bg-black relative">
+        <div className="fixed inset-0 gray-mesh pointer-events-none z-0"></div>
+        <div className="text-center animate-fade-in relative z-10">
+          <Loader2 size={40} className="animate-spin mx-auto mb-4 text-white" />
+          <p className="text-neutral-500 text-sm font-semibold tracking-widest uppercase">Initializing Core...</p>
         </div>
       </div>
     );
@@ -104,14 +105,18 @@ export default function HomePage() {
   if (!user) return null;
 
   return (
-    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
+    <div className="h-screen flex overflow-hidden bg-black relative font-sans text-white">
+      <div className="fixed inset-0 gray-mesh pointer-events-none z-0"></div>
+
       {/* Call overlay */}
       {isInCall && <CallView />}
 
       {/* Main layout */}
-      <Sidebar />
-      <CenterPanel />
-      {activeConversation && <RightPanel />}
+      <div className="relative z-10 w-full h-full flex">
+        <Sidebar />
+        <CenterPanel />
+        {activeConversation && <RightPanel />}
+      </div>
     </div>
   );
 }
