@@ -14,9 +14,6 @@ import {
     Edit3, Trash2, Pin, Reply, X, Loader2, ArrowDown,
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '🎉', '🔥', '👀', '💯', '✅', '👏', '🚀', '💡', '⭐', '🤔', '😮', '😢', '😡'];
 
@@ -33,105 +30,63 @@ export default function CenterPanel() {
     const [showScrollDown, setShowScrollDown] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-    // Fetch messages when conversation changes
     useEffect(() => {
         if (activeConversation?.id) {
             fetchMessages(activeConversation.id);
-
             const socket = getSocket();
             if (socket) {
                 socket.emit('join_conversation', activeConversation.id);
-                return () => {
-                    socket.emit('leave_conversation', activeConversation.id);
-                };
+                return () => { socket.emit('leave_conversation', activeConversation.id); };
             }
         }
     }, [activeConversation?.id, fetchMessages]);
 
-    // Auto-scroll
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Scroll tracking
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
         const el = e.currentTarget;
-        const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        setShowScrollDown(distFromBottom > 200);
+        setShowScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 200);
     }, []);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
     const handleSend = () => {
         if (!input.trim() || !activeConversation) return;
-
         const socket = getSocket();
         if (editingMessage) {
-            socket?.emit('edit_message', {
-                messageId: editingMessage.id,
-                content: input,
-                conversationId: activeConversation.id,
-            });
+            socket?.emit('edit_message', { messageId: editingMessage.id, content: input, conversationId: activeConversation.id });
             setEditingMessage(null);
         } else {
-            socket?.emit('send_message', {
-                conversationId: activeConversation.id,
-                content: input,
-            });
+            socket?.emit('send_message', { conversationId: activeConversation.id, content: input });
         }
-
         setInput('');
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-
-        // Typing indicator
-        if (activeConversation) {
-            const socket = getSocket();
-            socket?.emit('typing_start', { conversationId: activeConversation.id });
-        }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+        if (activeConversation) getSocket()?.emit('typing_start', { conversationId: activeConversation.id });
     };
 
     const handleReaction = (messageId: string, emoji: string) => {
-        const socket = getSocket();
-        socket?.emit('toggle_reaction', {
-            messageId,
-            emoji,
-            conversationId: activeConversation?.id,
-        });
+        getSocket()?.emit('toggle_reaction', { messageId, emoji, conversationId: activeConversation?.id });
         setShowEmojiPicker(null);
     };
 
     const handleDelete = (messageId: string) => {
-        const socket = getSocket();
-        socket?.emit('delete_message', {
-            messageId,
-            conversationId: activeConversation?.id,
-        });
+        getSocket()?.emit('delete_message', { messageId, conversationId: activeConversation?.id });
     };
 
     const handlePin = async (messageId: string) => {
         if (!activeConversation) return;
-        try {
-            await api.pinMessage(activeConversation.id, messageId);
-        } catch (err) {
-            console.error(err);
-        }
+        try { await api.pinMessage(activeConversation.id, messageId); } catch { }
     };
 
-    const openThread = (messageId: string) => {
-        useMessageStore.getState().openThread(messageId);
-    };
+    const openThread = (messageId: string) => useMessageStore.getState().openThread(messageId);
 
-    const getConversationTitle = () => {
+    const getTitle = () => {
         if (!activeConversation) return '';
         if (activeConversation.title) return activeConversation.title;
         if (activeConversation.type === 'direct') {
@@ -150,209 +105,234 @@ export default function CenterPanel() {
         }
     };
 
-    const formatMessageTime = (date: string) => {
-        const d = new Date(date);
-        return format(d, 'h:mm a');
+    const fmtTime = (d: string) => format(new Date(d), 'h:mm a');
+    const fmtDate = (d: string) => {
+        const dt = new Date(d);
+        if (isToday(dt)) return 'Today';
+        if (isYesterday(dt)) return 'Yesterday';
+        return format(dt, 'MMMM d, yyyy');
     };
 
-    const formatDateHeader = (date: string) => {
-        const d = new Date(date);
-        if (isToday(d)) return 'Today';
-        if (isYesterday(d)) return 'Yesterday';
-        return format(d, 'MMMM d, yyyy');
-    };
-
-    // Group messages by date
-    const groupedMessages = messages.reduce<{ date: string; messages: Message[] }[]>((groups, msg) => {
+    const grouped = messages.reduce<{ date: string; messages: Message[] }[]>((g, msg) => {
         const date = format(new Date(msg.created_at), 'yyyy-MM-dd');
-        const lastGroup = groups[groups.length - 1];
-        if (lastGroup?.date === date) {
-            lastGroup.messages.push(msg);
-        } else {
-            groups.push({ date, messages: [msg] });
-        }
-        return groups;
+        const last = g[g.length - 1];
+        if (last?.date === date) last.messages.push(msg);
+        else g.push({ date, messages: [msg] });
+        return g;
     }, []);
 
+    // Empty state
     if (!activeConversation) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-transparent relative overflow-hidden z-10 glass-card">
-                <div className="text-center animate-fade-in relative z-10">
-                    <div className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center bg-white/[0.03] border border-white/10 shadow-2xl glass-card">
-                        <MessageSquare size={32} className="text-white opacity-80" />
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', position: 'relative', fontFamily: "'Inter', system-ui, sans-serif", color: '#fff' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
+                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        backdropFilter: 'blur(20px)',
+                    }}>
+                        <MessageSquare size={28} style={{ opacity: 0.8 }} />
                     </div>
-                    <h2 className="text-3xl font-display font-bold mb-3 text-white tracking-tight">Select a conversation</h2>
-                    <p className="text-[11px] text-neutral-500 uppercase tracking-[0.2em] font-bold max-w-sm mx-auto">
-                        Connect with the ecosystem
-                    </p>
+                    <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: '-0.02em' }}>Select a conversation</h2>
+                    <p style={{ fontSize: 10, color: '#525252', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em' }}>Connect with the ecosystem</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex-1 flex flex-col bg-transparent relative z-10 glass-card">
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'transparent', position: 'relative', fontFamily: "'Inter', system-ui, sans-serif", color: '#fff' }}>
             {/* Header */}
-            <header className="flex items-center justify-between px-6 py-4 glass-card border-b border-white/10 z-10">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center text-white shadow-lg">
+            <header style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)', zIndex: 10,
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                        width: 40, height: 40, borderRadius: 12,
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
                         {getTypeIcon()}
                     </div>
                     <div>
-                        <h2 className="font-semibold text-white tracking-wide">{getConversationTitle()}</h2>
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-neutral-500">
+                        <h2 style={{ fontWeight: 600, fontSize: 15, letterSpacing: '0.02em' }}>{getTitle()}</h2>
+                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#525252', textTransform: 'uppercase' }}>
                             {activeConversation.participants?.length || 0} members
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" onClick={() => startCall(activeConversation.id)} className="rounded-xl border-white/10 bg-white/[0.03] hover:bg-white/[0.08] hover:text-white text-neutral-400 glass-card">
-                        <Phone size={16} />
-                    </Button>
-                </div>
+                <button onClick={() => startCall(activeConversation.id)}
+                    style={{
+                        width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                        color: '#737373', cursor: 'pointer', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#737373'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                >
+                    <Phone size={16} />
+                </button>
             </header>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 px-6 py-4" onScrollCapture={handleScroll}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }} onScroll={handleScroll}>
                 {loading ? (
-                    <div className="flex items-center justify-center h-full pt-10">
-                        <Loader2 size={24} className="animate-spin text-white" />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 40 }}>
+                        <Loader2 size={24} className="animate-spin" style={{ color: '#fff' }} />
                     </div>
                 ) : (
-                    <div className="max-w-4xl mx-auto">
-                        {groupedMessages.map(group => (
-                            <div key={group.date} className="pb-4">
-                                {/* Date separator */}
-                                <div className="flex items-center justify-center my-8 sticky top-2 z-10">
-                                    <span className="px-4 py-1.5 text-[10px] font-bold tracking-[0.2em] uppercase bg-black/80 backdrop-blur-md border border-white/10 rounded-full text-neutral-400 shadow-xl">
-                                        {formatDateHeader(group.messages[0].created_at)}
+                    <div style={{ maxWidth: 800, margin: '0 auto' }}>
+                        {grouped.map(group => (
+                            <div key={group.date} style={{ paddingBottom: 16 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '24px 0', position: 'sticky', top: 8, zIndex: 5 }}>
+                                    <span style={{
+                                        padding: '6px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase',
+                                        background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: 20, color: '#737373',
+                                    }}>
+                                        {fmtDate(group.messages[0].created_at)}
                                     </span>
                                 </div>
 
-                                {group.messages.map((msg, i) => {
+                                {group.messages.map(msg => {
                                     const isOwn = msg.author_id === user?.id;
                                     const threadCount = msg.threads?.[0]?.count || 0;
-                                    const reactionGroups = (msg.reactions || []).reduce<Record<string, { emoji: string; count: number; users: string[] }>>((acc, r) => {
-                                        if (!acc[r.emoji]) acc[r.emoji] = { emoji: r.emoji, count: 0, users: [] };
-                                        acc[r.emoji].count++;
-                                        acc[r.emoji].users.push(r.user_id);
-                                        return acc;
+                                    const reactions = (msg.reactions || []).reduce<Record<string, { emoji: string; count: number; users: string[] }>>((a, r) => {
+                                        if (!a[r.emoji]) a[r.emoji] = { emoji: r.emoji, count: 0, users: [] };
+                                        a[r.emoji].count++;
+                                        a[r.emoji].users.push(r.user_id);
+                                        return a;
                                     }, {});
+                                    const isHovered = hoveredMessage === msg.id;
 
                                     return (
-                                        <div
-                                            key={msg.id}
-                                            className={`group flex gap-4 py-3 px-4 -mx-4 rounded-2xl transition-all duration-300 ${hoveredMessage === msg.id ? 'bg-white/[0.02] border focus:border-white/10' : 'border border-transparent'}`}
+                                        <div key={msg.id}
+                                            style={{
+                                                display: 'flex', gap: 14, padding: '10px 14px', marginLeft: -14, marginRight: -14,
+                                                borderRadius: 16, transition: 'background 0.2s',
+                                                background: isHovered ? 'rgba(255,255,255,0.02)' : 'transparent',
+                                                position: 'relative',
+                                            }}
                                             onMouseEnter={() => setHoveredMessage(msg.id)}
                                             onMouseLeave={() => { setHoveredMessage(null); setShowEmojiPicker(null); }}
                                         >
-                                            <Avatar className="h-10 w-10 mt-1 flex-shrink-0 border border-white/10 bg-black shadow-lg">
-                                                <AvatarImage src={msg.author?.avatar_url || ''} />
-                                                <AvatarFallback className="text-white font-semibold text-sm">
-                                                    {msg.author?.display_name?.charAt(0).toUpperCase() || '?'}
-                                                </AvatarFallback>
-                                            </Avatar>
+                                            <div style={{
+                                                width: 36, height: 36, borderRadius: 10, flexShrink: 0, marginTop: 2,
+                                                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 13, fontWeight: 600,
+                                            }}>
+                                                {msg.author?.display_name?.charAt(0).toUpperCase() || '?'}
+                                            </div>
 
-                                            <div className="flex-1 min-w-0 flex flex-col">
-                                                <div className="flex items-baseline gap-3 mb-1.5">
-                                                    <span className={`font-semibold text-[15px] ${msg._blocked ? 'text-neutral-600' : 'text-white'}`}>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                                                    <span style={{ fontWeight: 600, fontSize: 14, color: msg._blocked ? '#404040' : '#fff' }}>
                                                         {msg.author?.display_name || 'Unknown'}
                                                     </span>
-                                                    <span className="text-[10px] uppercase font-bold tracking-widest text-neutral-500">
-                                                        {formatMessageTime(msg.created_at)}
-                                                        {msg.edited_at && <span className="ml-2 font-medium">(edited)</span>}
+                                                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#525252', textTransform: 'uppercase' }}>
+                                                        {fmtTime(msg.created_at)}
+                                                        {msg.edited_at && <span style={{ marginLeft: 6 }}>(edited)</span>}
                                                     </span>
                                                 </div>
 
-                                                <div className={`text-[15px] whitespace-pre-wrap break-words leading-relaxed ${msg._blocked ? 'text-neutral-600 italic' : 'text-neutral-300'}`}
-                                                    dangerouslySetInnerHTML={{
-                                                        __html: msg.content
-                                                            .replace(/@(\w+)/g, '<span class="text-white bg-white/10 px-1 rounded-md font-medium border border-white/20">@$1</span>')
-                                                            .replace(/#(\w+)/g, '<span class="text-white font-semibold underline decoration-white/30 underline-offset-2">#$1</span>')
-                                                    }}
-                                                />
+                                                <div style={{
+                                                    fontSize: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6,
+                                                    color: msg._blocked ? '#404040' : '#d4d4d4',
+                                                    fontStyle: msg._blocked ? 'italic' : 'normal',
+                                                }}>
+                                                    {msg.content}
+                                                </div>
 
-                                                {/* File attachments */}
-                                                {msg.file_attachments && msg.file_attachments.length > 0 && (
-                                                    <div className="flex flex-wrap gap-2 mt-3">
-                                                        {msg.file_attachments.map(file => (
-                                                            <a key={file.id} href={file.file_url} target="_blank" rel="noreferrer"
-                                                                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all text-neutral-300">
-                                                                <Paperclip size={14} className="text-neutral-500" />
-                                                                {file.file_name}
-                                                            </a>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                {/* Meta Row: Reactions & Replies */}
-                                                {(Object.keys(reactionGroups).length > 0 || threadCount > 0) && (
-                                                    <div className="flex flex-wrap items-center gap-2 mt-3">
-                                                        {Object.values(reactionGroups).map(r => (
-                                                            <button
-                                                                key={r.emoji}
-                                                                onClick={() => handleReaction(msg.id, r.emoji)}
-                                                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${r.users.includes(user?.id || '')
-                                                                        ? 'bg-white/10 border border-white/20 text-white'
-                                                                        : 'bg-white/[0.03] border border-white/10 text-neutral-400 hover:bg-white/[0.08]'
-                                                                    }`}
-                                                            >
-                                                                <span>{r.emoji}</span>
-                                                                <span className="font-bold">{r.count}</span>
+                                                {/* Reactions & thread */}
+                                                {(Object.keys(reactions).length > 0 || threadCount > 0) && (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                                                        {Object.values(reactions).map(r => (
+                                                            <button key={r.emoji} onClick={() => handleReaction(msg.id, r.emoji)}
+                                                                style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                                    padding: '3px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                                                                    background: r.users.includes(user?.id || '') ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.03)',
+                                                                    border: `1px solid ${r.users.includes(user?.id || '') ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)'}`,
+                                                                    color: r.users.includes(user?.id || '') ? '#fff' : '#737373',
+                                                                    cursor: 'pointer', fontFamily: 'inherit',
+                                                                }}>
+                                                                <span>{r.emoji}</span><span>{r.count}</span>
                                                             </button>
                                                         ))}
-
                                                         {threadCount > 0 && (
                                                             <button onClick={() => openThread(msg.id)}
-                                                                className="flex items-center gap-1.5 px-3 py-1 bg-white/[0.03] hover:bg-white/[0.08] rounded-full text-[11px] font-bold uppercase tracking-wide text-white transition-colors border border-white/10">
-                                                                <Reply size={13} />
-                                                                {threadCount} {threadCount === 1 ? 'REPLY' : 'REPLIES'}
+                                                                style={{
+                                                                    display: 'flex', alignItems: 'center', gap: 4,
+                                                                    padding: '3px 10px', borderRadius: 20, fontSize: 10, fontWeight: 700,
+                                                                    letterSpacing: '0.05em', textTransform: 'uppercase',
+                                                                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                                                                    color: '#fff', cursor: 'pointer', fontFamily: 'inherit',
+                                                                }}>
+                                                                <Reply size={12} /> {threadCount} {threadCount === 1 ? 'REPLY' : 'REPLIES'}
                                                             </button>
                                                         )}
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* Action buttons (on hover) */}
-                                            {hoveredMessage === msg.id && !msg._blocked && (
-                                                <div className="absolute right-6 -top-4 flex items-center bg-black/80 backdrop-blur-md border border-white/10 shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                                    <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
-                                                        className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors" title="React">
-                                                        <Smile size={16} />
-                                                    </button>
-                                                    <button onClick={() => openThread(msg.id)}
-                                                        className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors" title="Reply in thread">
-                                                        <Reply size={16} />
-                                                    </button>
-                                                    {isOwn && (
-                                                        <>
-                                                            <button onClick={() => { setEditingMessage(msg); setInput(msg.content); }}
-                                                                className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors" title="Edit">
-                                                                <Edit3 size={16} />
-                                                            </button>
-                                                            <button onClick={() => handleDelete(msg.id)}
-                                                                className="p-2 text-neutral-500 hover:text-white hover:bg-[#ff3333]/20 hover:text-[#ff3333] transition-colors" title="Delete">
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    <button onClick={() => handlePin(msg.id)}
-                                                        className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 transition-colors" title="Pin">
-                                                        <Pin size={16} />
-                                                    </button>
+                                            {/* Action toolbar */}
+                                            {isHovered && !msg._blocked && (
+                                                <div style={{
+                                                    position: 'absolute', right: 14, top: -12,
+                                                    display: 'flex', alignItems: 'center',
+                                                    background: 'rgba(10,10,10,0.9)', backdropFilter: 'blur(12px)',
+                                                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12,
+                                                    overflow: 'hidden',
+                                                }}>
+                                                    {[
+                                                        { icon: <Smile size={15} />, onClick: () => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id), title: 'React' },
+                                                        { icon: <Reply size={15} />, onClick: () => openThread(msg.id), title: 'Reply' },
+                                                        ...(isOwn ? [
+                                                            { icon: <Edit3 size={15} />, onClick: () => { setEditingMessage(msg); setInput(msg.content); }, title: 'Edit' },
+                                                            { icon: <Trash2 size={15} />, onClick: () => handleDelete(msg.id), title: 'Delete' },
+                                                        ] : []),
+                                                        { icon: <Pin size={15} />, onClick: () => handlePin(msg.id), title: 'Pin' },
+                                                    ].map((a, i) => (
+                                                        <button key={i} onClick={a.onClick} title={a.title}
+                                                            style={{
+                                                                padding: 8, color: '#525252', background: 'transparent',
+                                                                border: 'none', cursor: 'pointer', display: 'flex',
+                                                                alignItems: 'center', transition: 'all 0.15s',
+                                                            }}
+                                                            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.color = '#525252'; e.currentTarget.style.background = 'transparent'; }}
+                                                        >
+                                                            {a.icon}
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             )}
 
                                             {/* Emoji picker */}
                                             {showEmojiPicker === msg.id && (
-                                                <div className="absolute right-0 top-10 p-3 rounded-2xl bg-[#0a0a0a] border border-white/10 shadow-2xl z-20 w-[280px] glass-card">
-                                                    <div className="grid grid-cols-8 gap-2">
-                                                        {EMOJI_LIST.map(emoji => (
-                                                            <button key={emoji} className="w-8 h-8 flex items-center justify-center text-xl hover:bg-white/10 rounded-lg transition-colors" onClick={() => handleReaction(msg.id, emoji)}>
-                                                                {emoji}
-                                                            </button>
-                                                        ))}
-                                                    </div>
+                                                <div style={{
+                                                    position: 'absolute', right: 0, top: 32, padding: 10, borderRadius: 16,
+                                                    background: 'rgba(10,10,10,0.95)', border: '1px solid rgba(255,255,255,0.1)',
+                                                    backdropFilter: 'blur(20px)', zIndex: 20, width: 260,
+                                                    display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4,
+                                                }}>
+                                                    {EMOJI_LIST.map(emoji => (
+                                                        <button key={emoji} onClick={() => handleReaction(msg.id, emoji)}
+                                                            style={{
+                                                                width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                fontSize: 16, background: 'transparent', border: 'none', borderRadius: 6,
+                                                                cursor: 'pointer', transition: 'background 0.15s',
+                                                            }}
+                                                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                                        >
+                                                            {emoji}
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             )}
                                         </div>
@@ -360,57 +340,85 @@ export default function CenterPanel() {
                                 })}
                             </div>
                         ))}
-                        <div ref={messagesEndRef} className="h-4" />
+                        <div ref={messagesEndRef} style={{ height: 16 }} />
                     </div>
                 )}
-            </ScrollArea>
+            </div>
 
+            {/* Scroll to bottom */}
             {showScrollDown && (
                 <button onClick={scrollToBottom}
-                    className="absolute bottom-28 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-xl hover:bg-white/20 text-white rounded-full p-2.5 shadow-2xl z-10 border border-white/20 transition-all">
+                    style={{
+                        position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
+                        background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%',
+                        width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', cursor: 'pointer', zIndex: 10,
+                    }}>
                     <ArrowDown size={18} />
                 </button>
             )}
 
             {/* Input */}
-            <div className="p-6 bg-transparent border-t border-white/10 glass-card">
-                <div className="max-w-4xl mx-auto relative rounded-2xl bg-white/[0.03] border border-white/10 focus-within:border-white/20 focus-within:bg-white/[0.05] transition-all duration-300 shadow-lg input-glow">
+            <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)' }}>
+                <div style={{
+                    maxWidth: 800, margin: '0 auto', borderRadius: 16,
+                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                    transition: 'all 0.3s',
+                }}>
                     {editingMessage && (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.05] border-b border-white/10 rounded-t-2xl text-[11px] font-bold tracking-widest uppercase">
-                            <Edit3 size={12} className="text-white" />
-                            <span className="text-neutral-400">Editing message</span>
-                            <button onClick={() => { setEditingMessage(null); setInput(''); }} className="ml-auto text-neutral-500 hover:text-white transition-colors">
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px',
+                            background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '16px 16px 0 0', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase',
+                        }}>
+                            <Edit3 size={12} />
+                            <span style={{ color: '#737373' }}>Editing message</span>
+                            <button onClick={() => { setEditingMessage(null); setInput(''); }}
+                                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#525252', cursor: 'pointer', display: 'flex' }}>
                                 <X size={14} />
                             </button>
                         </div>
                     )}
-                    <div className="flex items-end gap-2 p-2">
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, padding: 8 }}>
                         <textarea
                             value={input}
-                            onChange={(e) => setInput(e.target.value)}
+                            onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="TRANSMIT MESSAGE..."
-                            className="flex-1 bg-transparent border-0 focus:ring-0 text-white placeholder:text-neutral-600 placeholder:text-xs placeholder:tracking-widest placeholder:uppercase placeholder:font-bold resize-none p-3 max-h-[150px] min-h-[48px] outline-none"
+                            style={{
+                                flex: 1, background: 'transparent', border: 'none', color: '#fff',
+                                fontSize: 13, resize: 'none', padding: '10px 12px',
+                                minHeight: 44, maxHeight: 150, outline: 'none',
+                                fontFamily: 'inherit', letterSpacing: '0.02em',
+                            }}
                             rows={1}
                         />
-                        <div className="flex items-center gap-1 p-1">
-                            <Button variant="ghost" size="icon" className="text-neutral-500 hover:text-white hover:bg-white/10 rounded-xl transition-all h-10 w-10">
-                                <Paperclip size={18} />
-                            </Button>
-                            <Button
-                                onClick={handleSend}
-                                disabled={!input.trim()}
-                                size="icon"
-                                className={`rounded-xl h-10 w-10 transition-all duration-300 ${input.trim() ? 'mono-gradient-btn text-black shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:scale-105 hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]' : 'bg-white/5 text-neutral-600'}`}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4 }}>
+                            <button style={{
+                                width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'transparent', border: 'none', color: '#525252', cursor: 'pointer', transition: 'color 0.2s',
+                            }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = '#525252'; }}
                             >
-                                <Send size={16} className={input.trim() ? 'translate-x-0.5 -translate-y-0.5' : ''} />
-                            </Button>
+                                <Paperclip size={18} />
+                            </button>
+                            <button onClick={handleSend} disabled={!input.trim()}
+                                style={{
+                                    width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', cursor: input.trim() ? 'pointer' : 'default',
+                                    background: input.trim() ? 'linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%)' : 'rgba(255,255,255,0.05)',
+                                    color: input.trim() ? '#000' : '#404040',
+                                    transition: 'all 0.3s',
+                                }}>
+                                <Send size={16} />
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Thread panel */}
             {activeThreadMessageId && <ThreadPanel />}
         </div>
     );

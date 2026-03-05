@@ -30,7 +30,6 @@ export default function HomePage() {
     }
   }, [initialized, loading, user, router]);
 
-  // Fetch data once authenticated
   useEffect(() => {
     if (user) {
       fetchConversations();
@@ -38,37 +37,19 @@ export default function HomePage() {
     }
   }, [user, fetchConversations, fetchSpaces]);
 
-  // Socket event listeners
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    socket.on('new_message', (message: any) => {
-      addMessage(message);
-    });
-
-    socket.on('message_edited', (message: any) => {
-      updateMessage(message);
-    });
-
-    socket.on('message_deleted', (data: any) => {
-      removeMessage(data.messageId);
-    });
-
-    socket.on('reaction_updated', (data: any) => {
-      updateReaction(data);
-    });
-
-    socket.on('new_thread_reply', (data: any) => {
-      addThreadReply(data.reply);
-    });
-
+    socket.on('new_message', (message: any) => addMessage(message));
+    socket.on('message_edited', (message: any) => updateMessage(message));
+    socket.on('message_deleted', (data: any) => removeMessage(data.messageId));
+    socket.on('reaction_updated', (data: any) => updateReaction(data));
+    socket.on('new_thread_reply', (data: any) => addThreadReply(data.reply));
     socket.on('user_typing', (data: any) => {
       setTypingUser(data.conversationId, data.userId);
       setTimeout(() => clearTypingUser(data.conversationId, data.userId), 3000);
     });
-
-    // Call events
     socket.on('call_user_joined', handleUserJoined);
     socket.on('call_user_left', handleUserLeft);
     socket.on('call_offer', handleOffer);
@@ -92,11 +73,26 @@ export default function HomePage() {
 
   if (!initialized || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black relative">
-        <div className="fixed inset-0 gray-mesh pointer-events-none z-0"></div>
-        <div className="text-center animate-fade-in relative z-10">
-          <Loader2 size={40} className="animate-spin mx-auto mb-4 text-white" />
-          <p className="text-neutral-500 text-sm font-semibold tracking-widest uppercase">Initializing Core...</p>
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'radial-gradient(circle at top center, #171717 0%, #000000 100%)',
+        fontFamily: "'Inter', system-ui, sans-serif",
+        color: '#fff',
+        position: 'relative',
+      }}>
+        {/* Gray mesh */}
+        <div style={{
+          position: 'fixed', inset: 0, pointerEvents: 'none',
+          backgroundImage: 'radial-gradient(at 0% 0%, rgba(255,255,255,0.03) 0, transparent 50%), radial-gradient(at 100% 0%, rgba(255,255,255,0.02) 0, transparent 50%), radial-gradient(at 50% 100%, rgba(255,255,255,0.01) 0, transparent 50%)',
+        }} />
+        <div style={{ textAlign: 'center', position: 'relative', zIndex: 10 }}>
+          <Loader2 size={36} className="animate-spin" style={{ margin: '0 auto 14px', color: '#fff' }} />
+          <p style={{ fontSize: 10, color: '#525252', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+            Initializing Core...
+          </p>
         </div>
       </div>
     );
@@ -105,14 +101,26 @@ export default function HomePage() {
   if (!user) return null;
 
   return (
-    <div className="h-screen flex overflow-hidden bg-black relative font-sans text-white">
-      <div className="fixed inset-0 gray-mesh pointer-events-none z-0"></div>
+    <div style={{
+      height: '100vh',
+      display: 'flex',
+      overflow: 'hidden',
+      background: 'radial-gradient(circle at top center, #171717 0%, #000000 100%)',
+      fontFamily: "'Inter', system-ui, sans-serif",
+      color: '#fff',
+      position: 'relative',
+    }}>
+      {/* Gray mesh */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0,
+        backgroundImage: 'radial-gradient(at 0% 0%, rgba(255,255,255,0.03) 0, transparent 50%), radial-gradient(at 100% 0%, rgba(255,255,255,0.02) 0, transparent 50%), radial-gradient(at 50% 100%, rgba(255,255,255,0.01) 0, transparent 50%)',
+      }} />
 
       {/* Call overlay */}
       {isInCall && <CallView />}
 
       {/* Main layout */}
-      <div className="relative z-10 w-full h-full flex">
+      <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%', display: 'flex' }}>
         <Sidebar />
         <CenterPanel />
         {activeConversation && <RightPanel />}
