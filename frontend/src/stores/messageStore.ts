@@ -81,7 +81,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     openThread: async (messageId) => {
         try {
             set({ activeThreadMessageId: messageId, threadMessages: [] });
-            const { data } = await api.getThreadReplies(messageId);
+            const data = await api.getThreadReplies(messageId);
             set({ threadMessages: data || [] });
         } catch (err) {
             console.error('Failed to fetch thread:', err);
