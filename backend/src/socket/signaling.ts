@@ -84,6 +84,15 @@ export function setupSignalingHandlers(io: Server, socket: Socket, userId: strin
         });
     });
 
+    // Call status update (mic/camera toggle)
+    socket.on('call_status_update', (data: { callId: string; isMicOn: boolean; isCameraOn: boolean }) => {
+        socket.to(`call:${data.callId}`).emit('call_status_update', {
+            userId,
+            isMicOn: data.isMicOn,
+            isCameraOn: data.isCameraOn,
+        });
+    });
+
     // Handle disconnect: clean up from all calls
     socket.on('disconnect', () => {
         activeCalls.forEach((participants, callId) => {
