@@ -13,8 +13,9 @@ import { Message, Account } from '@/types';
 import ThreadPanel from '@/components/message/ThreadPanel';
 import {
     Send, Paperclip, Smile, Phone, Hash, Users, MessageSquare,
-    Edit3, Trash2, Pin, Reply, X, Loader2, ArrowDown, Menu,
+    Edit3, Trash2, Pin, Reply, X, Loader2, ArrowDown, Menu, Image, Video, FileText, Volume2,
 } from 'lucide-react';
+import { FormEvent } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '🎉', '🔥', '👀', '💯', '✅', '👏', '🚀', '💡', '⭐', '🤔', '😮', '😢', '😡'];
@@ -28,6 +29,11 @@ export default function CenterPanel() {
     const isMobile = useIsMobile();
 
     const [input, setInput] = useState('');
+    const [sending, setSending] = useState(false);
+    const [attachment, setAttachment] = useState<File | null>(null);
+    const [uploadingAttachment, setUploadingAttachment] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const [editingMessage, setEditingMessage] = useState<Message | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
     const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
@@ -57,19 +63,56 @@ export default function CenterPanel() {
 
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-    const handleSend = () => {
-        if (!input.trim() || !activeConversation) return;
-        const socket = getSocket();
-        if (editingMessage) {
-            socket?.emit('edit_message', { messageId: editingMessage.id, content: input, conversationId: activeConversation.id });
-            setEditingMessage(null);
-        } else {
-            socket?.emit('send_message', { conversationId: activeConversation.id, content: input });
+    const handleSend = async () => {
+        if ((!input.trim() && !attachment) || !activeConversation || sending || uploadingAttachment) return;
+
+        setSending(true);
+        try {
+            let uploadedAttachmentData = undefined;
+
+            if (attachment) {
+                setUploadingAttachment(true);
+                const url = await api.uploadFile(attachment, 'attachments');
+                uploadedAttachmentData = {
+                    url,
+                    name: attachment.name,
+                    size: attachment.size,
+                    type: attachment.type,
+                };
+            }
+
+            if (editingMessage) {
+                await api.editMessage(editingMessage.id, input.trim());
+                useMessageStore.getState().updateMessage({ ...editingMessage, content: input.trim() });
+                setEditingMessage(null);
+            } else {
+                const newMsg = await api.sendMessage(activeConversation.id, input.trim(), uploadedAttachmentData);
+                useMessageStore.getState().addMessage(newMsg);
+            }
+            setInput('');
+            setAttachment(null);
+        } catch (err) {
+            console.error('Failed to send message:', err);
+            alert('Failed to send message or upload file.');
+        } finally {
+            setSending(false);
+            setUploadingAttachment(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
-        setInput('');
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 20 * 1024 * 1024) {
+                alert('File is too large. Maximum size is 20MB.');
+                return;
+            }
+            setAttachment(file);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
         if (activeConversation) getSocket()?.emit('typing_start', { conversationId: activeConversation.id });
     };
@@ -95,7 +138,10 @@ export default function CenterPanel() {
         if (activeConversation.title) return activeConversation.title;
         if (activeConversation.type === 'direct') {
             const other = activeConversation.participants?.find((p: Account) => p.id !== user?.id);
-            return other?.display_name || 'Direct Message';
+            if (other) {
+                return getDisplayName(other.id, other.display_name);
+            }
+            return 'Direct Message';
         }
         return 'Conversation';
     };
@@ -255,7 +301,7 @@ export default function CenterPanel() {
                                                 {!isOwn && (
                                                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
                                                         <span style={{ fontWeight: 600, fontSize: 14, color: msg._blocked ? '#404040' : '#fff' }}>
-                                                            {getDisplayName(msg.author_id, msg.author?.display_name || 'Unknown')}
+                                                            {getDisplayName ? getDisplayName(msg.author_id, msg.author?.display_name || 'Unknown') : (msg.author?.display_name || 'Unknown')}
                                                         </span>
                                                         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#525252', textTransform: 'uppercase' }}>
                                                             {fmtTime(msg.created_at)}
@@ -283,6 +329,33 @@ export default function CenterPanel() {
                                                     textAlign: isOwn ? 'right' : 'left',
                                                     maxWidth: '85%',
                                                 }}>
+                                                    {msg.file_attachments && msg.file_attachments.map((file: any) => {
+                                                        const type = file.mime_type.split('/')[0];
+                                                        return (
+                                                            <div key={file.id} style={{ marginBottom: msg.content ? 8 : 0, borderRadius: 8, overflow: 'hidden' }}>
+                                                                {type === 'image' ? (
+                                                                    <a href={file.file_url} target="_blank" rel="noopener noreferrer">
+                                                                        <img src={file.file_url} alt="Attachment" style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 8 }} />
+                                                                    </a>
+                                                                ) : type === 'video' ? (
+                                                                    <video src={file.file_url} controls style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8 }} />
+                                                                ) : type === 'audio' ? (
+                                                                    <audio src={file.file_url} controls style={{ maxWidth: '100%', width: 250 }} />
+                                                                ) : (
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,0,0,0.3)', padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)' }}>
+                                                                        <FileText size={24} color="#a3a3a3" />
+                                                                        <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                                                                            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.file_name}</p>
+                                                                            <p style={{ margin: 0, fontSize: 10, color: '#737373' }}>{(file.file_size / 1024).toFixed(1)} KB</p>
+                                                                        </div>
+                                                                        <a href={file.file_url} download target="_blank" rel="noopener noreferrer" style={{ color: '#fff', fontSize: 12, fontWeight: 600, textDecoration: 'none', background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: 4 }}>
+                                                                            Download
+                                                                        </a>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                     {msg.content}
                                                 </div>
 
@@ -419,12 +492,39 @@ export default function CenterPanel() {
                             </button>
                         </div>
                     )}
+
+                    {attachment && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                            background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: editingMessage ? '0' : '16px 16px 0 0',
+                        }}>
+                            <div style={{
+                                width: 36, height: 36, borderRadius: 8, background: 'rgba(0,0,0,0.4)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)'
+                            }}>
+                                {attachment.type.startsWith('image/') ? <Image size={16} color="#3b82f6" /> :
+                                    attachment.type.startsWith('video/') ? <Video size={16} color="#ef4444" /> :
+                                        attachment.type.startsWith('audio/') ? <Volume2 size={16} color="#10b981" /> :
+                                            <FileText size={16} color="#8b5cf6" />}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontSize: 13, fontWeight: 600, color: '#fff', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{attachment.name}</p>
+                                <p style={{ fontSize: 11, color: '#737373', margin: 0 }}>{(attachment.size / 1024).toFixed(1)} KB</p>
+                            </div>
+                            <button onClick={() => setAttachment(null)}
+                                style={{ background: 'none', border: 'none', color: '#737373', cursor: 'pointer', display: 'flex', padding: 4 }}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, padding: 8 }}>
                         <textarea
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="TRANSMIT MESSAGE..."
+                            placeholder={attachment ? "Add a message..." : "TRANSMIT MESSAGE..."}
                             style={{
                                 flex: 1, background: 'transparent', border: 'none', color: '#fff',
                                 fontSize: 13, resize: 'none', padding: '10px 12px',
@@ -434,24 +534,33 @@ export default function CenterPanel() {
                             rows={1}
                         />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: 4 }}>
-                            <button style={{
-                                width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'transparent', border: 'none', color: '#525252', cursor: 'pointer', transition: 'color 0.2s',
-                            }}
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                style={{ display: 'none' }}
+                                onChange={handleFileSelect}
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                style={{
+                                    width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: attachment ? 'rgba(255,255,255,0.1)' : 'transparent', border: 'none', color: attachment ? '#fff' : '#525252', cursor: 'pointer', transition: 'all 0.2s',
+                                }}
                                 onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
-                                onMouseLeave={e => { e.currentTarget.style.color = '#525252'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = attachment ? '#fff' : '#525252'; }}
                             >
                                 <Paperclip size={18} />
                             </button>
-                            <button onClick={handleSend} disabled={!input.trim()}
+                            <button onClick={handleSend} disabled={(!input.trim() && !attachment) || sending || uploadingAttachment}
                                 style={{
                                     width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', cursor: input.trim() ? 'pointer' : 'default',
-                                    background: input.trim() ? 'linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%)' : 'rgba(255,255,255,0.05)',
-                                    color: input.trim() ? '#000' : '#404040',
+                                    border: 'none', cursor: (input.trim() || attachment) ? 'pointer' : 'default',
+                                    background: (input.trim() || attachment) ? 'linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%)' : 'rgba(255,255,255,0.05)',
+                                    color: (input.trim() || attachment) ? '#000' : '#404040',
                                     transition: 'all 0.3s',
+                                    opacity: sending || uploadingAttachment ? 0.7 : 1
                                 }}>
-                                <Send size={16} />
+                                {(sending || uploadingAttachment) ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                             </button>
                         </div>
                     </div>
