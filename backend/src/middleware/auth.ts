@@ -57,7 +57,8 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
                 .single();
 
             if (createError) {
-                return res.status(500).json({ error: 'Failed to create account' });
+                console.error('Account create error:', JSON.stringify(createError));
+                return res.status(500).json({ error: 'Failed to create account', details: createError.message });
             }
 
             req.user = {
