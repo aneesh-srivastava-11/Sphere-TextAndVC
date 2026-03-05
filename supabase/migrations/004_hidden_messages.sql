@@ -1,6 +1,6 @@
 -- Create conversation_cleared table to track local chat clearing
 CREATE TABLE IF NOT EXISTS conversation_cleared (
-    user_id UUID REFERENCES accounts(supabase_uid) ON DELETE CASCADE,
+    user_id TEXT REFERENCES accounts(supabase_uid) ON DELETE CASCADE,
     conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
     cleared_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (user_id, conversation_id)
@@ -15,5 +15,5 @@ ALTER TABLE conversation_cleared ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own cleared timestamps"
     ON conversation_cleared
     FOR ALL
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
+    USING (auth.uid()::TEXT = user_id)
+    WITH CHECK (auth.uid()::TEXT = user_id);
