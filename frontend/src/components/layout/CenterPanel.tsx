@@ -14,7 +14,9 @@ import ThreadPanel from '@/components/message/ThreadPanel';
 import {
     Send, Paperclip, Smile, Phone, Hash, Users, MessageSquare,
     Edit3, Trash2, Pin, Reply, X, Loader2, ArrowDown, Menu, Image, Video, FileText, Volume2,
+    Info,
 } from 'lucide-react';
+import UserProfileModal from './UserProfileModal';
 import { FormEvent } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 
@@ -22,7 +24,7 @@ const EMOJI_LIST = ['👍', '❤️', '😂', '🎉', '🔥', '👀', '💯', '�
 
 export default function CenterPanel() {
     const { user } = useAuthStore();
-    const { activeConversation, setSidebarOpen } = useConversationStore();
+    const { activeConversation, setSidebarOpen, sidebarOpen } = useConversationStore();
     const { messages, loading, fetchMessages, activeThreadMessageId } = useMessageStore();
     const { startCall } = useCallStore();
     const { getDisplayName } = useNicknameStore();
@@ -32,6 +34,7 @@ export default function CenterPanel() {
     const [sending, setSending] = useState(false);
     const [attachment, setAttachment] = useState<File | null>(null);
     const [uploadingAttachment, setUploadingAttachment] = useState(false);
+    const [selectedUserProfile, setSelectedUserProfile] = useState<Account | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -131,6 +134,20 @@ export default function CenterPanel() {
         try { await api.pinMessage(activeConversation.id, messageId); } catch { }
     };
 
+    const handleClearChat = async () => {
+        if (!activeConversation) return;
+        if (!confirm('Are you sure you want to clear this conversation locally? This will not delete messages for other users.')) return;
+
+        try {
+            await api.clearConversation(activeConversation.id);
+            // Clear local messages instantly
+            useMessageStore.setState({ messages: [] });
+        } catch (err) {
+            console.error('Failed to clear conversation:', err);
+            alert('Failed to clear conversation.');
+        }
+    };
+
     const openThread = (messageId: string) => useMessageStore.getState().openThread(messageId);
 
     const getTitle = () => {
@@ -174,18 +191,33 @@ export default function CenterPanel() {
     // Empty state
     if (!activeConversation) {
         return (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', position: 'relative', fontFamily: "'Inter', system-ui, sans-serif", color: '#fff' }}>
-                <div style={{ textAlign: 'center' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'transparent', position: 'relative', fontFamily: "'Inter', system-ui, sans-serif", color: '#fff' }}>
+                {!sidebarOpen && (
                     <div style={{
-                        width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
-                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        backdropFilter: 'blur(20px)',
+                        padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)',
                     }}>
-                        <MessageSquare size={28} style={{ opacity: 0.8 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex' }}>
+                                <Menu size={20} />
+                            </button>
+                            <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Sphere</span>
+                        </div>
                     </div>
-                    <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: '-0.02em' }}>Select a conversation</h2>
-                    <p style={{ fontSize: 10, color: '#525252', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em' }}>Connect with the ecosystem</p>
+                )}
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{
+                            width: 64, height: 64, borderRadius: 16, margin: '0 auto 20px',
+                            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            backdropFilter: 'blur(20px)',
+                        }}>
+                            <MessageSquare size={28} style={{ opacity: 0.8 }} />
+                        </div>
+                        <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: '-0.02em' }}>Select a conversation</h2>
+                        <p style={{ fontSize: 10, color: '#525252', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em' }}>Connect with the ecosystem</p>
+                    </div>
                 </div>
             </div>
         );
@@ -200,7 +232,7 @@ export default function CenterPanel() {
                 background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)', zIndex: 10,
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    {isMobile && (
+                    {!sidebarOpen && (
                         <button onClick={() => setSidebarOpen(true)}
                             style={{
                                 width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -221,21 +253,54 @@ export default function CenterPanel() {
                     <div>
                         <h2 style={{ fontWeight: 600, fontSize: 15, letterSpacing: '0.02em' }}>{getTitle()}</h2>
                         <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#525252', textTransform: 'uppercase' }}>
-                            {activeConversation.participants?.length || 0} members
+                            {activeConversation?.participants?.length || 0} members
                         </p>
                     </div>
                 </div>
-                <button onClick={() => startCall(activeConversation.id)}
-                    style={{
-                        width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-                        color: '#737373', cursor: 'pointer', transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = '#737373'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
-                >
-                    <Phone size={16} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {activeConversation?.type === 'direct' && (
+                        <button onClick={() => {
+                            const otherMember = activeConversation.participants?.find((p: Account) => p.id !== user?.id);
+                            if (otherMember) setSelectedUserProfile(otherMember);
+                        }}
+                            style={{
+                                height: 36, padding: '0 12px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 8,
+                                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                                color: '#737373', cursor: 'pointer', fontSize: 13, fontWeight: 500, transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = '#737373'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                            title="View Profile"
+                        >
+                            <Info size={16} />
+                            {!isMobile && "View Profile"}
+                        </button>
+                    )}
+                    <button onClick={handleClearChat}
+                        style={{
+                            width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                            color: '#ef4444', cursor: 'pointer', transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                        title="Clear Chat Locally"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                    <button onClick={() => { if (activeConversation) startCall(activeConversation.id); }}
+                        style={{
+                            width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                            color: '#737373', cursor: 'pointer', transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = '#737373'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                        title="Start Call"
+                    >
+                        <Phone size={16} />
+                    </button>
+                </div>
             </header>
 
             {/* Messages */}
@@ -283,13 +348,23 @@ export default function CenterPanel() {
                                             onMouseLeave={() => { setHoveredMessage(null); setShowEmojiPicker(null); }}
                                         >
                                             {!isOwn && (
-                                                <div style={{
-                                                    width: 36, height: 36, borderRadius: 10, flexShrink: 0, marginTop: 2,
-                                                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: 13, fontWeight: 600,
-                                                }}>
-                                                    {msg.author?.display_name?.charAt(0).toUpperCase() || '?'}
+                                                <div
+                                                    onClick={() => {
+                                                        const authorAcc = activeConversation.participants?.find((p: Account) => p.id === msg.author_id);
+                                                        if (authorAcc) setSelectedUserProfile(authorAcc);
+                                                    }}
+                                                    style={{
+                                                        width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+                                                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: 14, fontWeight: 600, cursor: 'pointer', overflow: 'hidden'
+                                                    }}
+                                                >
+                                                    {msg.author?.avatar_url ? (
+                                                        <img src={msg.author.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        msg.author?.display_name?.charAt(0).toUpperCase()
+                                                    )}
                                                 </div>
                                             )}
 
@@ -568,6 +643,10 @@ export default function CenterPanel() {
             </div>
 
             {activeThreadMessageId && <ThreadPanel />}
+
+            {selectedUserProfile && (
+                <UserProfileModal user={selectedUserProfile} onClose={() => setSelectedUserProfile(null)} />
+            )}
         </div>
     );
 }

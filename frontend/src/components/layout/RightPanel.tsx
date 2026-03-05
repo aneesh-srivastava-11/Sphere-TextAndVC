@@ -10,8 +10,9 @@ import { api } from '@/lib/api';
 import { Account } from '@/types';
 import {
     Users, Pin, Paperclip, Shield, UserMinus, Ban,
-    VolumeX, PhoneCall, Edit3
+    VolumeX, PhoneCall, Edit3, User as UserIcon
 } from 'lucide-react';
+import UserProfileModal from './UserProfileModal';
 
 export default function RightPanel() {
     const { user } = useAuthStore();
@@ -25,6 +26,7 @@ export default function RightPanel() {
     const [showModMenu, setShowModMenu] = useState<string | null>(null);
     const [editingNicknameFor, setEditingNicknameFor] = useState<string | null>(null);
     const [nicknameInput, setNicknameInput] = useState('');
+    const [selectedUserForProfile, setSelectedUserForProfile] = useState<Account | null>(null);
 
     const participants = activeConversation?.participants || [];
     const userRole = participants.find((p: Account) => p.id === user?.id)?.role;
@@ -103,13 +105,20 @@ export default function RightPanel() {
                                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; setShowModMenu(null); }}
                             >
-                                <div style={{
-                                    width: 32, height: 32, borderRadius: 10, flexShrink: 0,
-                                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: 12, fontWeight: 600,
-                                }}>
-                                    {member.display_name?.charAt(0).toUpperCase()}
+                                <div
+                                    onClick={() => setSelectedUserForProfile(member)}
+                                    style={{
+                                        width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+                                        background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: 12, fontWeight: 600, cursor: 'pointer', overflow: 'hidden'
+                                    }}
+                                >
+                                    {member.avatar_url ? (
+                                        <img src={member.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        member.display_name?.charAt(0).toUpperCase()
+                                    )}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     {editingNicknameFor === member.id ? (
@@ -140,21 +149,30 @@ export default function RightPanel() {
                                             />
                                         </div>
                                     ) : (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: member.id !== user?.id ? 'pointer' : 'default' }}
-                                            onClick={() => {
-                                                if (member.id !== user?.id) {
-                                                    setEditingNicknameFor(member.id);
-                                                    setNicknameInput(nicknames[member.id] || '');
-                                                }
-                                            }}
-                                        >
-                                            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title="Click to set nickname">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <span
+                                                onClick={() => setSelectedUserForProfile(member)}
+                                                style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                                            >
                                                 {getDisplayName(member.id, member.display_name)}
                                             </span>
                                             {nicknames[member.id] && (
                                                 <span style={{ fontSize: 10, color: '#a3a3a3', textDecoration: 'line-through' }}>{member.display_name}</span>
                                             )}
                                             {member.id === user?.id && <span style={{ fontSize: 9, color: '#525252', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>You</span>}
+
+                                            {member.id !== user?.id && (
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingNicknameFor(member.id);
+                                                        setNicknameInput(nicknames[member.id] || '');
+                                                    }}
+                                                    style={{ background: 'none', border: 'none', color: '#404040', cursor: 'pointer', display: 'flex', padding: 2 }}
+                                                    title="Set Nickname"
+                                                >
+                                                    <Edit3 size={10} />
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                     <span style={{
@@ -253,6 +271,10 @@ export default function RightPanel() {
                     </div>
                 )}
             </div>
+
+            {selectedUserForProfile && (
+                <UserProfileModal user={selectedUserForProfile} onClose={() => setSelectedUserForProfile(null)} />
+            )}
         </aside>
     );
 }

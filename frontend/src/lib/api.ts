@@ -101,6 +101,7 @@ export const api = {
         request<any>(`/api/messages/${convId}/pin/${msgId}`, { method: 'POST' }),
     unpinMessage: (convId: string, msgId: string) =>
         request<any>(`/api/messages/${convId}/pin/${msgId}`, { method: 'DELETE' }),
+    clearConversation: (convId: string) => request<any>(`/api/messages/${convId}/clear`, { method: 'POST' }),
     getThreadReplies: (msgId: string) => request<any[]>(`/api/messages/threads/${msgId}`),
     addThreadReply: (msgId: string, content: string) =>
         request<any>(`/api/messages/threads/${msgId}`, { method: 'POST', body: JSON.stringify({ content }) }),

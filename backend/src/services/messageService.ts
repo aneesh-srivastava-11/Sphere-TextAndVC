@@ -5,6 +5,14 @@ export class MessageService {
     static async getMessages(conversationId: string, userId: string, limit = 50, before?: string) {
         const blockedIds = await BlockService.getBlockedUserIds(userId);
 
+        // Get cleared_at timestamp
+        const { data: clearData } = await supabase
+            .from('conversation_cleared')
+            .select('cleared_at')
+            .eq('user_id', userId)
+            .eq('conversation_id', conversationId)
+            .single();
+
         let query = supabase
             .from('messages')
             .select(`
@@ -17,6 +25,10 @@ export class MessageService {
             .eq('conversation_id', conversationId)
             .order('created_at', { ascending: false })
             .limit(limit);
+
+        if (clearData?.cleared_at) {
+            query = query.gt('created_at', clearData.cleared_at);
+        }
 
         if (before) {
             query = query.lt('created_at', before);
@@ -167,4 +179,15 @@ export class MessageService {
       `)
             .single();
     }
+
+    static async clearConversation(conversationId: string, userId: string) {
+        return supabase
+            .from('conversation_cleared')
+            .upsert({
+                user_id: userId,
+                conversation_id: conversationId,
+                cleared_at: new Date().toISOString()
+            });
+    }
 }
+

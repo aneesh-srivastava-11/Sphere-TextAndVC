@@ -128,7 +128,7 @@ export default function Sidebar() {
         <>
             <aside
                 style={{
-                    display: isMobile ? (sidebarOpen ? 'flex' : 'none') : 'flex',
+                    display: sidebarOpen ? 'flex' : 'none',
                     flexDirection: 'column',
                     height: '100%',
                     width: isMobile ? '100%' : 320,
@@ -160,14 +160,14 @@ export default function Sidebar() {
                         >
                             <Plus size={20} />
                         </button>
-                        {isMobile && (
-                            <button
-                                onClick={() => setSidebarOpen(false)}
-                                style={{ background: 'none', border: 'none', color: '#737373', cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
-                            >
-                                <X size={20} />
-                            </button>
-                        )}
+                        <button
+                            onClick={() => setSidebarOpen(false)}
+                            style={{ background: 'none', border: 'none', color: '#737373', cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = '#737373'; }}
+                        >
+                            <X size={20} />
+                        </button>
                     </div>
                 </div>
 
@@ -378,8 +378,8 @@ export default function Sidebar() {
                                     <h2 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>New Conversation</h2>
                                     <p style={{ fontSize: 12, color: '#525252', marginTop: 4 }}>Create a direct message, group, or space.</p>
                                 </div>
-                                <button onClick={() => setCreateModalOpen(false)} style={{ background: 'none', border: 'none', color: '#525252', cursor: 'pointer', padding: 4 }}>
-                                    <X size={18} />
+                                <button onClick={() => setSidebarOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', padding: 6 }}>
+                                    <X size={20} />
                                 </button>
                             </div>
 
