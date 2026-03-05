@@ -49,7 +49,8 @@ export default function LoginPage() {
         <div
             style={{
                 background: 'radial-gradient(circle at top center, #171717 0%, #000000 100%)',
-                minHeight: '100vh',
+                height: '100vh',
+                maxHeight: '100vh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -70,36 +71,36 @@ export default function LoginPage() {
                 }}
             />
 
-            <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 440, padding: '48px 24px' }}>
+            <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 440, padding: '24px 24px' }}>
                 {/* Logo & Title */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 40 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 24 }}>
                     <div
                         style={{
-                            width: 64,
-                            height: 64,
+                            width: 48,
+                            height: 48,
                             background: 'rgba(255,255,255,0.03)',
                             backdropFilter: 'blur(20px)',
                             WebkitBackdropFilter: 'blur(20px)',
                             border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: 16,
+                            borderRadius: 14,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            marginBottom: 32,
+                            marginBottom: 16,
                             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
                         }}
                     >
-                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M18.178 8c5.096 0 5.096 8 0 8-5.095 0-7.133-8-12.739-8-4.585 0-4.585 8 0 8 5.606 0 7.644-8 12.739-8z" />
                         </svg>
                     </div>
                     <h1
                         style={{
-                            fontSize: '2.25rem',
+                            fontSize: '1.75rem',
                             fontFamily: "'Plus Jakarta Sans', sans-serif",
                             fontWeight: 800,
                             color: '#fff',
-                            marginBottom: 12,
+                            marginBottom: 8,
                             letterSpacing: '-0.025em',
                         }}
                     >
@@ -108,7 +109,7 @@ export default function LoginPage() {
                     <p
                         style={{
                             color: '#737373',
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: 500,
                             letterSpacing: '0.05em',
                         }}
@@ -124,19 +125,19 @@ export default function LoginPage() {
                         backdropFilter: 'blur(20px)',
                         WebkitBackdropFilter: 'blur(20px)',
                         border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: '2.5rem',
+                        borderRadius: '2rem',
                         padding: 8,
                         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
                     }}
                 >
-                    <div style={{ padding: 32 }}>
+                    <div style={{ padding: '20px 24px' }}>
                         {/* Tabs */}
                         <div
                             style={{
                                 display: 'flex',
                                 gap: 24,
                                 borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                marginBottom: 32,
+                                marginBottom: 20,
                             }}
                         >
                             <button
@@ -187,7 +188,7 @@ export default function LoginPage() {
                         </div>
 
                         {/* Form */}
-                        <form onSubmit={handleAction} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                        <form onSubmit={handleAction} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                             {/* Email */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 <label
@@ -214,7 +215,7 @@ export default function LoginPage() {
                                         background: 'rgba(255,255,255,0.03)',
                                         border: '1px solid rgba(255,255,255,0.10)',
                                         borderRadius: '0.75rem',
-                                        padding: '16px',
+                                        padding: '12px 16px',
                                         color: '#fff',
                                         fontSize: 14,
                                         outline: 'none',
@@ -281,7 +282,7 @@ export default function LoginPage() {
                                             background: 'rgba(255,255,255,0.03)',
                                             border: '1px solid rgba(255,255,255,0.10)',
                                             borderRadius: '0.75rem',
-                                            padding: '16px',
+                                            padding: '12px 16px',
                                             paddingRight: '48px',
                                             color: '#fff',
                                             fontSize: 14,
@@ -349,13 +350,13 @@ export default function LoginPage() {
                                     background: 'linear-gradient(135deg, #ffffff 0%, #e5e5e5 100%)',
                                     color: '#000',
                                     fontWeight: 700,
-                                    padding: '16px',
+                                    padding: '12px 16px',
                                     borderRadius: '0.75rem',
                                     border: 'none',
                                     cursor: loading ? 'not-allowed' : 'pointer',
                                     opacity: loading ? 0.5 : 1,
                                     transition: 'all 0.3s',
-                                    marginTop: 16,
+                                    marginTop: 8,
                                     fontSize: 14,
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.1em',
@@ -378,7 +379,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Footer text */}
-                <div style={{ marginTop: 40, textAlign: 'center' }}>
+                <div style={{ marginTop: 20, textAlign: 'center' }}>
                     <p
                         style={{
                             fontSize: 11,
