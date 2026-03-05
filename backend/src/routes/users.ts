@@ -128,4 +128,61 @@ router.get('/blocks/list', authMiddleware, async (req: AuthRequest, res) => {
     }
 });
 
+// -- Nicknames --
+
+// Get all nicknames set by the current user
+router.get('/nicknames/all', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('user_nicknames')
+            .select('target_user_id, nickname')
+            .eq('user_id', req.user!.id);
+
+        if (error) return res.status(500).json({ error: error.message });
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch nicknames' });
+    }
+});
+
+// Set or update a nickname for another user
+router.put('/nicknames/:targetId', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const { nickname } = req.body;
+        if (!nickname || typeof nickname !== 'string') {
+            return res.status(400).json({ error: 'Nickname is required' });
+        }
+
+        const { data, error } = await supabase
+            .from('user_nicknames')
+            .upsert(
+                { user_id: req.user!.id, target_user_id: req.params.targetId, nickname },
+                { onConflict: 'user_id,target_user_id' }
+            )
+            .select()
+            .single();
+
+        if (error) return res.status(500).json({ error: error.message });
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to set nickname' });
+    }
+});
+
+// Remove a nickname
+router.delete('/nicknames/:targetId', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const { error } = await supabase
+            .from('user_nicknames')
+            .delete()
+            .eq('user_id', req.user!.id)
+            .eq('target_user_id', req.params.targetId);
+
+        if (error) return res.status(500).json({ error: error.message });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to remove nickname' });
+    }
+});
+
 export default router;

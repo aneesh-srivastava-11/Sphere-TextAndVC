@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 import { connectSocket, disconnectSocket } from '@/lib/socket';
 import { Session } from '@supabase/supabase-js';
+import { useNicknameStore } from '@/stores/nicknameStore';
 
 interface AuthState {
     user: Account | null;
@@ -36,6 +37,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (session) {
                 try {
                     const user = await api.syncUser();
+                    useNicknameStore.getState().fetchNicknames();
                     connectSocket(session.access_token);
                     set({ user, session, loading: false, initialized: true });
                 } catch {
@@ -51,6 +53,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 if (event === 'SIGNED_IN' && session) {
                     try {
                         const user = await api.syncUser();
+                        useNicknameStore.getState().fetchNicknames();
                         connectSocket(session.access_token);
                         set({ user, session });
                     } catch {
@@ -89,6 +92,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (data.session) {
             try {
                 const user = await api.syncUser();
+                useNicknameStore.getState().fetchNicknames();
                 connectSocket(data.session.access_token);
                 set({ user, session: data.session, loading: false, initialized: true });
             } catch {

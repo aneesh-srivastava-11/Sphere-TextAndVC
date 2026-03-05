@@ -26,6 +26,9 @@ interface ConversationState {
     createSpace: (name: string, description?: string) => Promise<Space>;
 
     setSidebarTab: (tab: 'conversations' | 'spaces') => void;
+
+    sidebarOpen: boolean;
+    setSidebarOpen: (isOpen: boolean) => void;
 }
 
 export const useConversationStore = create<ConversationState>((set, get) => ({
@@ -35,6 +38,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     activeSpace: null,
     loading: false,
     sidebarTab: 'conversations',
+    sidebarOpen: false,
 
     fetchConversations: async () => {
         try {
@@ -106,4 +110,5 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     },
 
     setSidebarTab: (tab) => set({ sidebarTab: tab }),
+    setSidebarOpen: (isOpen) => set({ sidebarOpen: isOpen }),
 }));
