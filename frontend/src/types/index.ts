@@ -94,6 +94,7 @@ export interface CallSession {
 export interface PeerConnection {
     userId: string;
     socketId: string;
+    displayName: string;
     connection: RTCPeerConnection;
     stream?: MediaStream;
     isMicOn?: boolean;

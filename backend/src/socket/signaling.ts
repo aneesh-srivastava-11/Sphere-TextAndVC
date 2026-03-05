@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 
-// Track active calls: callId -> Set of participant socketIds & user info
-const activeCalls = new Map<string, Map<string, { socketId: string; userId: string }>>();
+// Track active calls: callId -> Map of participant userId -> info
+const activeCalls = new Map<string, Map<string, { socketId: string; userId: string; displayName: string }>>();
 
 export function setupSignalingHandlers(io: Server, socket: Socket, userId: string) {
     // Join a call
@@ -15,16 +15,18 @@ export function setupSignalingHandlers(io: Server, socket: Socket, userId: strin
         const callParticipants = activeCalls.get(callId)!;
 
         // Notify existing participants about new joiner
+        const displayName = (socket as any).user?.display_name || 'User';
         callParticipants.forEach((participant) => {
             io.to(participant.socketId).emit('call_user_joined', {
                 userId,
+                displayName,
                 socketId: socket.id,
                 callId,
             });
         });
 
         // Add new participant
-        callParticipants.set(userId, { socketId: socket.id, userId });
+        callParticipants.set(userId, { socketId: socket.id, userId, displayName });
 
         // Join socket room for this call
         socket.join(`call:${callId}`);
@@ -32,7 +34,11 @@ export function setupSignalingHandlers(io: Server, socket: Socket, userId: strin
         // Send current participants to the joiner
         const existingParticipants = Array.from(callParticipants.entries())
             .filter(([uid]) => uid !== userId)
-            .map(([uid, info]) => ({ userId: uid, socketId: info.socketId }));
+            .map(([uid, info]) => ({
+                userId: uid,
+                socketId: info.socketId,
+                displayName: info.displayName
+            }));
 
         socket.emit('call_participants', { callId, participants: existingParticipants });
     });
