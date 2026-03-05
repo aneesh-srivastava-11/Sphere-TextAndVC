@@ -22,7 +22,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '🎉', '🔥', '👀', '💯', '✅', '👏', '🚀', '💡', '⭐', '🤔', '😮', '😢', '😡'];
 
-export default function CenterPanel() {
+export default function CenterPanel({ onToggleRightSidebar }: { onToggleRightSidebar?: () => void }) {
     const { user } = useAuthStore();
     const { activeConversation, setSidebarOpen, sidebarOpen } = useConversationStore();
     const { messages, loading, fetchMessages, activeThreadMessageId } = useMessageStore();
@@ -254,6 +254,7 @@ export default function CenterPanel() {
                         <h2 style={{ fontWeight: 600, fontSize: 15, letterSpacing: '0.02em' }}>{getTitle()}</h2>
                         <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#525252', textTransform: 'uppercase' }}>
                             {activeConversation?.participants?.length || 0} members
+                            {activeConversation?.type === 'direct' && !activeConversation.is_accepted && " • PENDING REQUEST"}
                         </p>
                     </div>
                 </div>
@@ -300,8 +301,48 @@ export default function CenterPanel() {
                     >
                         <Phone size={16} />
                     </button>
+                    {isMobile && (
+                        <button onClick={onToggleRightSidebar}
+                            style={{
+                                width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                                color: '#737373', cursor: 'pointer'
+                            }}
+                        >
+                            <Info size={16} />
+                        </button>
+                    )}
                 </div>
             </header>
+
+            {/* DM Request Banner */}
+            {activeConversation?.type === 'direct' && !activeConversation.is_accepted && activeConversation.created_by !== user?.id && (
+                <div style={{
+                    padding: '16px 24px', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 5
+                }}>
+                    <div>
+                        <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>Message Request</p>
+                        <p style={{ fontSize: 12, color: '#737373', margin: '4px 0 0' }}>Do you want to let {getTitle()} message you?</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await api.acceptDM(activeConversation.id);
+                                    useConversationStore.getState().loadConversation(activeConversation.id);
+                                } catch (err) { alert('Failed to accept request'); }
+                            }}
+                            style={{
+                                padding: '8px 16px', borderRadius: 8, background: '#fff', color: '#000',
+                                border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                            }}
+                        >
+                            Accept
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Messages */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }} onScroll={handleScroll}>

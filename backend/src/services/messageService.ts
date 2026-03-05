@@ -9,7 +9,7 @@ export class MessageService {
         const { data: clearData } = await supabase
             .from('conversation_cleared')
             .select('cleared_at')
-            .eq('user_id', supabaseUid)
+            .eq('user_id', internalId)
             .eq('conversation_id', conversationId)
             .single();
 
@@ -180,11 +180,11 @@ export class MessageService {
             .single();
     }
 
-    static async clearConversation(conversationId: string, supabaseUid: string) {
+    static async clearConversation(conversationId: string, internalId: string) {
         return supabase
             .from('conversation_cleared')
             .upsert({
-                user_id: supabaseUid,
+                user_id: internalId,
                 conversation_id: conversationId,
                 cleared_at: new Date().toISOString()
             });

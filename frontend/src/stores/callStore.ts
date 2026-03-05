@@ -161,6 +161,18 @@ export const useCallStore = create<CallState>((set, get) => ({
         const pc = createPeerConnection();
         addStreamTracks(pc, localStream);
 
+        // Add peer to state immediately so ontrack can find it
+        set((state) => {
+            const peers = new Map(state.peers);
+            peers.set(data.userId, {
+                userId: data.userId,
+                socketId: data.socketId,
+                displayName: data.displayName,
+                connection: pc
+            });
+            return { peers };
+        });
+
         pc.onicecandidate = (event) => {
             if (event.candidate) {
                 socket.emit('ice_candidate', {
@@ -191,17 +203,6 @@ export const useCallStore = create<CallState>((set, get) => ({
             callId: data.callId,
             fromDisplayName: useAuthStore.getState().user?.display_name || 'User'
         });
-
-        set((state) => {
-            const peers = new Map(state.peers);
-            peers.set(data.userId, {
-                userId: data.userId,
-                socketId: data.socketId,
-                displayName: data.displayName,
-                connection: pc
-            });
-            return { peers };
-        });
     },
 
     handleParticipants: async (data) => {
@@ -231,6 +232,18 @@ export const useCallStore = create<CallState>((set, get) => ({
         const pc = createPeerConnection();
         addStreamTracks(pc, localStream);
 
+        // Add peer to state immediately so ontrack can find it
+        set((state) => {
+            const peers = new Map(state.peers);
+            peers.set(data.fromUserId, {
+                userId: data.fromUserId,
+                socketId: data.fromSocketId,
+                displayName: data.fromDisplayName,
+                connection: pc,
+            });
+            return { peers };
+        });
+
         pc.onicecandidate = (event) => {
             if (event.candidate) {
                 socket.emit('ice_candidate', {
@@ -254,7 +267,7 @@ export const useCallStore = create<CallState>((set, get) => ({
 
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
 
-        // Process queued candidates that might have arrived before setRemoteDescription
+        // Process queued candidates
         const queuedCandidates = (pc as any).candidateQueue || [];
         for (const cand of queuedCandidates) {
             try {
@@ -272,17 +285,6 @@ export const useCallStore = create<CallState>((set, get) => ({
             targetSocketId: data.fromSocketId,
             answer,
             callId: '',
-        });
-
-        set((state) => {
-            const peers = new Map(state.peers);
-            peers.set(data.fromUserId, {
-                userId: data.fromUserId,
-                socketId: data.fromSocketId,
-                displayName: data.fromDisplayName,
-                connection: pc,
-            });
-            return { peers };
         });
     },
 

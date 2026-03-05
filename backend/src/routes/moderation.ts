@@ -8,6 +8,7 @@ import { MessageService } from '../services/messageService';
 const router = Router();
 
 // Report a message
+// Report a message (updated)
 router.post('/report', authMiddleware, async (req: AuthRequest, res) => {
     try {
         const { messageId, reason } = req.body;
@@ -18,6 +19,22 @@ router.post('/report', authMiddleware, async (req: AuthRequest, res) => {
         res.status(201).json(data);
     } catch (err) {
         res.status(500).json({ error: 'Failed to create report' });
+    }
+});
+
+// Report a user with context
+router.post('/report-user', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const { targetUserId, conversationId, reason } = req.body;
+        if (!targetUserId || !conversationId || !reason) {
+            return res.status(400).json({ error: 'targetUserId, conversationId, and reason required' });
+        }
+
+        const report = await ModerationService.reportUserWithContext(req.user!.id, targetUserId, conversationId, reason);
+        res.status(201).json(report);
+    } catch (err) {
+        console.error('Report user error:', err);
+        res.status(500).json({ error: 'Failed to create user report' });
     }
 });
 
@@ -69,6 +86,23 @@ router.post('/ban', authMiddleware, async (req: AuthRequest, res) => {
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: 'Failed to ban user' });
+    }
+});
+
+// Unban user
+router.post('/unban', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const { conversationId, userId } = req.body;
+
+        const role = await ConversationService.getUserRole(conversationId, req.user!.id);
+        if (role !== 'owner' && role !== 'moderator') {
+            return res.status(403).json({ error: 'Moderator access required' });
+        }
+
+        const result = await ModerationService.unbanUser(req.user!.id, conversationId, userId);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to unban user' });
     }
 });
 

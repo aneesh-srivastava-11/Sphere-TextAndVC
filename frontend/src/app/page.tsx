@@ -16,8 +16,14 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 
 export default function HomePage() {
   const { user, loading, initialized, initialize } = useAuthStore();
-  const { fetchConversations, fetchSpaces, activeConversation, setSidebarOpen } = useConversationStore();
-  const { addMessage, updateMessage, removeMessage, updateReaction, addThreadReply, setTypingUser, clearTypingUser } = useMessageStore();
+  const {
+    fetchConversations, fetchSpaces, activeConversation,
+    sidebarOpen, setSidebarOpen, rightSidebarOpen, setRightSidebarOpen
+  } = useConversationStore();
+  const {
+    addMessage, updateMessage, removeMessage, updateReaction,
+    addThreadReply, setTypingUser, clearTypingUser
+  } = useMessageStore();
   const { isInCall, handleUserJoined, handleUserLeft, handleOffer, handleAnswer, handleIceCandidate, handleStatusUpdate, handleParticipants } = useCallStore();
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -112,13 +118,15 @@ export default function HomePage() {
 
   return (
     <div style={{
-      height: '100vh',
+      height: '100dvh',
+      width: '100vw',
       display: 'flex',
       overflow: 'hidden',
       background: 'radial-gradient(circle at top center, #171717 0%, #000000 100%)',
       fontFamily: "'Inter', system-ui, sans-serif",
       color: '#fff',
-      position: 'relative',
+      position: 'fixed',
+      inset: 0,
     }}>
       {/* Gray mesh */}
       <div style={{
@@ -132,8 +140,10 @@ export default function HomePage() {
       {/* Main layout */}
       <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%', display: 'flex' }}>
         <Sidebar />
-        <CenterPanel />
-        {activeConversation && <RightPanel />}
+        <CenterPanel onToggleRightSidebar={() => setRightSidebarOpen(!rightSidebarOpen)} />
+        {activeConversation && (isMobile ? rightSidebarOpen : true) && (
+          <RightPanel onClose={() => setRightSidebarOpen(false)} />
+        )}
       </div>
     </div>
   );

@@ -1,8 +1,6 @@
-'use client';
-
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { X, Upload, Loader2, Save, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Loader2, Save, Image as ImageIcon, Ban, UserX } from 'lucide-react';
 import { api } from '@/lib/api';
 
 export default function ProfileModal({ onClose }: { onClose: () => void }) {
@@ -11,7 +9,34 @@ export default function ProfileModal({ onClose }: { onClose: () => void }) {
     const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+    const [loadingBlocks, setLoadingBlocks] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        fetchBlocks();
+    }, []);
+
+    const fetchBlocks = async () => {
+        setLoadingBlocks(true);
+        try {
+            const blocks = await api.getBlockedUsers();
+            setBlockedUsers(blocks);
+        } catch (err) {
+            console.error('Failed to fetch blocks', err);
+        } finally {
+            setLoadingBlocks(false);
+        }
+    };
+
+    const handleUnblock = async (userId: string) => {
+        try {
+            await api.unblockUser(userId);
+            setBlockedUsers(prev => prev.filter(b => b.blocked.id !== userId));
+        } catch (err) {
+            alert('Failed to unblock user');
+        }
+    };
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -48,8 +73,9 @@ export default function ProfileModal({ onClose }: { onClose: () => void }) {
         >
             <style>{`.avatar-overlay:hover { opacity: 1 !important; }`}</style>
             <div style={{
-                width: '100%', maxWidth: 400, background: 'rgba(20,20,20,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24,
+                width: '100%', maxWidth: 450, background: 'rgba(20,20,20,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 24,
                 padding: 24, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', fontFamily: "'Inter', system-ui, sans-serif", color: '#fff',
+                maxHeight: '85vh', overflowY: 'auto'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
                     <div>
@@ -136,6 +162,41 @@ export default function ProfileModal({ onClose }: { onClose: () => void }) {
                                 transition: 'all 0.3s', fontFamily: 'inherit', boxSizing: 'border-box',
                             }}
                         />
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                            <Ban size={14} color="#737373" />
+                            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#737373' }}>Banned Users</label>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 150, overflowY: 'auto', paddingRight: 4 }}>
+                            {loadingBlocks ? (
+                                <div style={{ textAlign: 'center', padding: 10 }}><Loader2 size={16} className="animate-spin" color="#525252" /></div>
+                            ) : blockedUsers.length === 0 ? (
+                                <p style={{ fontSize: 12, color: '#525252', fontStyle: 'italic', textAlign: 'center', padding: '8px 0' }}>No users on your ban list.</p>
+                            ) : (
+                                blockedUsers.map(block => (
+                                    <div key={block.id} style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            <div style={{ width: 24, height: 24, borderRadius: 6, background: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>
+                                                {block.blocked.avatar_url ? <img src={block.blocked.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: 6 }} /> : block.blocked.display_name.charAt(0)}
+                                            </div>
+                                            <span style={{ fontSize: 13 }}>{block.blocked.display_name}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleUnblock(block.blocked.id)}
+                                            style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: '#737373', fontSize: 11, padding: '4px 8px', borderRadius: 6, cursor: 'pointer' }}
+                                        >
+                                            Unban
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
 
                     <div style={{ height: 16 }} />

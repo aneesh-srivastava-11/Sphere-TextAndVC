@@ -10,11 +10,11 @@ import { api } from '@/lib/api';
 import { Account } from '@/types';
 import {
     Users, Pin, Paperclip, Shield, UserMinus, Ban,
-    VolumeX, PhoneCall, Edit3, User as UserIcon
+    VolumeX, PhoneCall, Edit3, User as UserIcon, X
 } from 'lucide-react';
 import UserProfileModal from './UserProfileModal';
 
-export default function RightPanel() {
+export default function RightPanel({ onClose }: { onClose?: () => void }) {
     const { user } = useAuthStore();
     const { activeConversation } = useConversationStore();
     const { activeCall, isInCall } = useCallStore();
@@ -60,18 +60,42 @@ export default function RightPanel() {
         </button>
     );
 
-    if (isMobile) return null;
-
     return (
         <aside style={{
-            width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%',
-            background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)',
-            borderLeft: '1px solid rgba(255,255,255,0.08)',
-            fontFamily: "'Inter', system-ui, sans-serif", color: '#fff', position: 'relative', zIndex: 10,
+            width: isMobile ? 'calc(100% - 40px)' : 280,
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            background: isMobile ? 'rgba(10,10,10,0.95)' : 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(20px)',
+            borderLeft: isMobile ? 'none' : '1px solid rgba(255,255,255,0.08)',
+            borderRight: isMobile ? '1px solid rgba(255,255,255,0.08)' : 'none',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            color: '#fff',
+            position: isMobile ? 'fixed' : 'relative',
+            right: 0,
+            top: 0,
+            zIndex: 100,
+            boxShadow: isMobile ? '-20px 0 50px rgba(0,0,0,0.5)' : 'none',
+            transition: 'transform 0.3s ease',
         }}>
+            {isMobile && (
+                <div
+                    onClick={onClose}
+                    style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: -1 }}
+                />
+            )}
             {/* Header */}
-            <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#525252', marginBottom: 12 }}>Details</p>
+            <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em', color: '#525252' }}>Details</p>
+                {isMobile && (
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#525252', cursor: 'pointer' }}>
+                        <X size={18} />
+                    </button>
+                )}
+            </div>
+            <div style={{ padding: '0 16px 12px' }}>
 
                 {isInCall && activeCall && (
                     <div style={{

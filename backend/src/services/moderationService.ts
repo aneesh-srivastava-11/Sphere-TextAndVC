@@ -9,6 +9,44 @@ export class ModerationService {
             .single();
     }
 
+    static async reportUserWithContext(reporterId: string, targetUserId: string, conversationId: string, reason: string) {
+        // Fetch last 5 messages for context
+        const { data: messages } = await supabase
+            .from('messages')
+            .select(`
+                id,
+                content,
+                author:accounts!author_id(display_name, email),
+                created_at,
+                attachments
+            `)
+            .eq('conversation_id', conversationId)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        const { data: report, error } = await supabase
+            .from('user_reports')
+            .insert({
+                reporter_id: reporterId,
+                target_user_id: targetUserId,
+                conversation_id: conversationId,
+                reason,
+                context_messages: messages || []
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // Simulate sending email to aneeshplays1175@gmail.com
+        console.log(`📧 REPORT SYSTEM: Sending email to aneeshplays1175@gmail.com for report ${report.id}`);
+        console.log(`   Target User: ${targetUserId}`);
+        console.log(`   Reason: ${reason}`);
+        console.log(`   Context: ${JSON.stringify(messages, null, 2)}`);
+
+        return report;
+    }
+
     static async getReports(conversationId: string) {
         return supabase
             .from('reports')
@@ -79,6 +117,23 @@ export class ModerationService {
         await supabase.from('moderation_actions').insert({
             moderator_id: moderatorId,
             action_type: 'ban_user',
+            target_user: userId,
+            conversation_id: conversationId,
+        });
+
+        return { success: true };
+    }
+
+    static async unbanUser(moderatorId: string, conversationId: string, userId: string) {
+        await supabase
+            .from('banned_users')
+            .delete()
+            .eq('conversation_id', conversationId)
+            .eq('user_id', userId);
+
+        await supabase.from('moderation_actions').insert({
+            moderator_id: moderatorId,
+            action_type: 'unban_user',
             target_user: userId,
             conversation_id: conversationId,
         });
