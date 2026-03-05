@@ -37,6 +37,13 @@ export const api = {
     blockUser: (id: string) => request<any>(`/api/users/block/${id}`, { method: 'POST' }),
     unblockUser: (id: string) => request<any>(`/api/users/block/${id}`, { method: 'DELETE' }),
 
+    // Nicknames
+    getNicknames: () => request<any[]>('/api/users/nicknames/all'),
+    setNickname: (targetUserId: string, nickname: string) =>
+        request<any>(`/api/users/nicknames/${targetUserId}`, { method: 'PUT', body: JSON.stringify({ nickname }) }),
+    removeNickname: (targetUserId: string) =>
+        request<any>(`/api/users/nicknames/${targetUserId}`, { method: 'DELETE' }),
+
     // Conversations
     getConversations: () => request<any[]>('/api/conversations'),
     getConversation: (id: string) => request<any>(`/api/conversations/${id}`),

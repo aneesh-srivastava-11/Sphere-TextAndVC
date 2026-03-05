@@ -4,21 +4,27 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useConversationStore } from '@/stores/conversationStore';
 import { useCallStore } from '@/stores/callStore';
+import { useNicknameStore } from '@/stores/nicknameStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { api } from '@/lib/api';
 import { Account } from '@/types';
 import {
     Users, Pin, Paperclip, Shield, UserMinus, Ban,
-    VolumeX, PhoneCall
+    VolumeX, PhoneCall, Edit3
 } from 'lucide-react';
 
 export default function RightPanel() {
     const { user } = useAuthStore();
     const { activeConversation } = useConversationStore();
     const { activeCall, isInCall } = useCallStore();
+    const { getDisplayName, nicknames, setNickname, removeNickname } = useNicknameStore();
+    const isMobile = useIsMobile();
 
     const [activeTab, setActiveTab] = useState<'members' | 'pinned' | 'files'>('members');
     const [pinnedMessages, setPinnedMessages] = useState<any[]>([]);
     const [showModMenu, setShowModMenu] = useState<string | null>(null);
+    const [editingNicknameFor, setEditingNicknameFor] = useState<string | null>(null);
+    const [nicknameInput, setNicknameInput] = useState('');
 
     const participants = activeConversation?.participants || [];
     const userRole = participants.find((p: Account) => p.id === user?.id)?.role;
@@ -51,6 +57,8 @@ export default function RightPanel() {
             {count !== undefined && <span>{count}</span>}
         </button>
     );
+
+    if (isMobile) return null;
 
     return (
         <aside style={{
@@ -104,12 +112,51 @@ export default function RightPanel() {
                                     {member.display_name?.charAt(0).toUpperCase()}
                                 </div>
                                 <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {member.display_name}
-                                        </span>
-                                        {member.id === user?.id && <span style={{ fontSize: 9, color: '#525252', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>You</span>}
-                                    </div>
+                                    {editingNicknameFor === member.id ? (
+                                        <div style={{ display: 'flex', gap: 4, width: '100%' }}>
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                value={nicknameInput}
+                                                onChange={e => setNicknameInput(e.target.value)}
+                                                onKeyDown={async (e) => {
+                                                    if (e.key === 'Enter') {
+                                                        if (nicknameInput.trim()) {
+                                                            await setNickname(member.id, nicknameInput.trim());
+                                                        } else {
+                                                            await removeNickname(member.id);
+                                                        }
+                                                        setEditingNicknameFor(null);
+                                                    } else if (e.key === 'Escape') {
+                                                        setEditingNicknameFor(null);
+                                                    }
+                                                }}
+                                                onBlur={() => setEditingNicknameFor(null)}
+                                                placeholder={member.display_name}
+                                                style={{
+                                                    width: '100%', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.2)',
+                                                    borderRadius: 6, padding: '4px 8px', color: '#fff', fontSize: 13, outline: 'none'
+                                                }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: member.id !== user?.id ? 'pointer' : 'default' }}
+                                            onClick={() => {
+                                                if (member.id !== user?.id) {
+                                                    setEditingNicknameFor(member.id);
+                                                    setNicknameInput(nicknames[member.id] || '');
+                                                }
+                                            }}
+                                        >
+                                            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title="Click to set nickname">
+                                                {getDisplayName(member.id, member.display_name)}
+                                            </span>
+                                            {nicknames[member.id] && (
+                                                <span style={{ fontSize: 10, color: '#a3a3a3', textDecoration: 'line-through' }}>{member.display_name}</span>
+                                            )}
+                                            {member.id === user?.id && <span style={{ fontSize: 9, color: '#525252', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>You</span>}
+                                        </div>
+                                    )}
                                     <span style={{
                                         fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em',
                                         color: member.role === 'owner' ? '#fff' : member.role === 'moderator' ? '#d4d4d4' : '#525252',
@@ -183,7 +230,7 @@ export default function RightPanel() {
                                 }}>
                                     <div style={{ position: 'absolute', top: 0, left: 0, width: 3, height: '100%', background: 'rgba(255,255,255,0.2)' }} />
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, paddingLeft: 6 }}>
-                                        <span style={{ fontSize: 12, fontWeight: 600 }}>{pin.message?.author?.display_name}</span>
+                                        <span style={{ fontSize: 12, fontWeight: 600 }}>{getDisplayName(pin.message?.author_id, pin.message?.author?.display_name)}</span>
                                         <Pin size={12} style={{ color: '#525252' }} />
                                     </div>
                                     <p style={{ fontSize: 12, color: '#737373', paddingLeft: 6, lineHeight: 1.5 }}>{pin.message?.content}</p>

@@ -5,13 +5,15 @@ import { useAuthStore } from '@/stores/authStore';
 import { useConversationStore } from '@/stores/conversationStore';
 import { useMessageStore } from '@/stores/messageStore';
 import { useCallStore } from '@/stores/callStore';
+import { useNicknameStore } from '@/stores/nicknameStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { getSocket } from '@/lib/socket';
 import { api } from '@/lib/api';
 import { Message, Account } from '@/types';
 import ThreadPanel from '@/components/message/ThreadPanel';
 import {
     Send, Paperclip, Smile, Phone, Hash, Users, MessageSquare,
-    Edit3, Trash2, Pin, Reply, X, Loader2, ArrowDown,
+    Edit3, Trash2, Pin, Reply, X, Loader2, ArrowDown, Menu,
 } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 
@@ -19,9 +21,11 @@ const EMOJI_LIST = ['👍', '❤️', '😂', '🎉', '🔥', '👀', '💯', '�
 
 export default function CenterPanel() {
     const { user } = useAuthStore();
-    const { activeConversation } = useConversationStore();
+    const { activeConversation, setSidebarOpen } = useConversationStore();
     const { messages, loading, fetchMessages, activeThreadMessageId } = useMessageStore();
     const { startCall } = useCallStore();
+    const { getDisplayName } = useNicknameStore();
+    const isMobile = useIsMobile();
 
     const [input, setInput] = useState('');
     const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -150,6 +154,17 @@ export default function CenterPanel() {
                 background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)', zIndex: 10,
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    {isMobile && (
+                        <button onClick={() => setSidebarOpen(true)}
+                            style={{
+                                width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                                color: '#fff', cursor: 'pointer',
+                            }}
+                        >
+                            <Menu size={18} />
+                        </button>
+                    )}
                     <div style={{
                         width: 40, height: 40, borderRadius: 12,
                         background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
@@ -211,45 +226,69 @@ export default function CenterPanel() {
                                     return (
                                         <div key={msg.id}
                                             style={{
-                                                display: 'flex', gap: 14, padding: '10px 14px', marginLeft: -14, marginRight: -14,
+                                                display: 'flex', gap: 14, padding: isMobile ? '10px' : '10px 14px',
+                                                marginLeft: isMobile ? 0 : -14, marginRight: isMobile ? 0 : -14,
                                                 borderRadius: 16, transition: 'background 0.2s',
                                                 background: isHovered ? 'rgba(255,255,255,0.02)' : 'transparent',
                                                 position: 'relative',
+                                                flexDirection: isOwn ? 'row-reverse' : 'row',
                                             }}
                                             onMouseEnter={() => setHoveredMessage(msg.id)}
                                             onMouseLeave={() => { setHoveredMessage(null); setShowEmojiPicker(null); }}
                                         >
-                                            <div style={{
-                                                width: 36, height: 36, borderRadius: 10, flexShrink: 0, marginTop: 2,
-                                                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: 13, fontWeight: 600,
-                                            }}>
-                                                {msg.author?.display_name?.charAt(0).toUpperCase() || '?'}
-                                            </div>
-
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                                                    <span style={{ fontWeight: 600, fontSize: 14, color: msg._blocked ? '#404040' : '#fff' }}>
-                                                        {msg.author?.display_name || 'Unknown'}
-                                                    </span>
-                                                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#525252', textTransform: 'uppercase' }}>
-                                                        {fmtTime(msg.created_at)}
-                                                        {msg.edited_at && <span style={{ marginLeft: 6 }}>(edited)</span>}
-                                                    </span>
+                                            {!isOwn && (
+                                                <div style={{
+                                                    width: 36, height: 36, borderRadius: 10, flexShrink: 0, marginTop: 2,
+                                                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    fontSize: 13, fontWeight: 600,
+                                                }}>
+                                                    {msg.author?.display_name?.charAt(0).toUpperCase() || '?'}
                                                 </div>
+                                            )}
+
+                                            <div style={{
+                                                flex: 1, minWidth: 0,
+                                                display: 'flex', flexDirection: 'column',
+                                                alignItems: isOwn ? 'flex-end' : 'flex-start'
+                                            }}>
+                                                {!isOwn && (
+                                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                                                        <span style={{ fontWeight: 600, fontSize: 14, color: msg._blocked ? '#404040' : '#fff' }}>
+                                                            {getDisplayName(msg.author_id, msg.author?.display_name || 'Unknown')}
+                                                        </span>
+                                                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#525252', textTransform: 'uppercase' }}>
+                                                            {fmtTime(msg.created_at)}
+                                                            {msg.edited_at && <span style={{ marginLeft: 6 }}>(edited)</span>}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                {isOwn && (
+                                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                                                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: '#525252', textTransform: 'uppercase' }}>
+                                                            {msg.edited_at && <span style={{ marginRight: 6 }}>(edited)</span>}
+                                                            {fmtTime(msg.created_at)}
+                                                        </span>
+                                                    </div>
+                                                )}
 
                                                 <div style={{
                                                     fontSize: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6,
-                                                    color: msg._blocked ? '#404040' : '#d4d4d4',
+                                                    color: msg._blocked ? '#404040' : (isOwn ? '#fff' : '#d4d4d4'),
                                                     fontStyle: msg._blocked ? 'italic' : 'normal',
+                                                    background: isOwn ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                    padding: isOwn ? '8px 14px' : '0',
+                                                    borderRadius: isOwn ? '14px 14px 0 14px' : '0',
+                                                    border: isOwn ? '1px solid rgba(255,255,255,0.15)' : 'none',
+                                                    textAlign: isOwn ? 'right' : 'left',
+                                                    maxWidth: '85%',
                                                 }}>
                                                     {msg.content}
                                                 </div>
 
                                                 {/* Reactions & thread */}
                                                 {(Object.keys(reactions).length > 0 || threadCount > 0) && (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 8, justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
                                                         {Object.values(reactions).map(r => (
                                                             <button key={r.emoji} onClick={() => handleReaction(msg.id, r.emoji)}
                                                                 style={{
@@ -282,8 +321,8 @@ export default function CenterPanel() {
                                             {/* Action toolbar */}
                                             {isHovered && !msg._blocked && (
                                                 <div style={{
-                                                    position: 'absolute', right: 14, top: -12,
-                                                    display: 'flex', alignItems: 'center',
+                                                    position: 'absolute', [isOwn ? 'left' : 'right']: 14, top: -12,
+                                                    display: 'flex', alignItems: 'center', flexDirection: isOwn ? 'row-reverse' : 'row',
                                                     background: 'rgba(10,10,10,0.9)', backdropFilter: 'blur(12px)',
                                                     border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12,
                                                     overflow: 'hidden',
@@ -315,7 +354,7 @@ export default function CenterPanel() {
                                             {/* Emoji picker */}
                                             {showEmojiPicker === msg.id && (
                                                 <div style={{
-                                                    position: 'absolute', right: 0, top: 32, padding: 10, borderRadius: 16,
+                                                    position: 'absolute', [isOwn ? 'left' : 'right']: 0, top: 32, padding: 10, borderRadius: 16,
                                                     background: 'rgba(10,10,10,0.95)', border: '1px solid rgba(255,255,255,0.1)',
                                                     backdropFilter: 'blur(20px)', zIndex: 20, width: 260,
                                                     display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4,
