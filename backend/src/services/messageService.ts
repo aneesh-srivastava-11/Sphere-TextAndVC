@@ -44,8 +44,8 @@ export class MessageService {
         return { data: messages?.reverse(), error: null };
     }
 
-    static async sendMessage(conversationId: string, authorId: string, content: string) {
-        return supabase
+    static async sendMessage(conversationId: string, authorId: string, content: string, attachment?: { url: string, name: string, size: number, type: string }) {
+        const { data: message, error: messageError } = await supabase
             .from('messages')
             .insert({ conversation_id: conversationId, author_id: authorId, content })
             .select(`
@@ -53,6 +53,30 @@ export class MessageService {
         author:accounts!author_id(id, display_name, avatar_url)
       `)
             .single();
+
+        if (messageError) return { data: null, error: messageError };
+
+        let fileObj = null;
+        if (attachment && message) {
+            const { data: fileData, error: fileError } = await supabase
+                .from('file_attachments')
+                .insert({
+                    message_id: message.id,
+                    file_url: attachment.url,
+                    file_name: attachment.name,
+                    file_size: attachment.size,
+                    mime_type: attachment.type,
+                    uploaded_by: authorId
+                })
+                .select('id, file_url, file_name, file_size, mime_type')
+                .single();
+
+            if (!fileError) {
+                fileObj = fileData;
+            }
+        }
+
+        return { data: { ...message, file_attachments: fileObj ? [fileObj] : [] }, error: null };
     }
 
     static async editMessage(messageId: string, authorId: string, content: string) {
