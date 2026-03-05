@@ -29,7 +29,11 @@ export class ConversationService {
         // Create new DM
         const { data: conversation, error: convError } = await supabase
             .from('conversations')
-            .insert({ type: 'direct', created_by: userId })
+            .insert({
+                type: 'direct',
+                created_by: userId,
+                is_accepted: false // New DMs start as pending
+            })
             .select()
             .single();
 
@@ -163,13 +167,17 @@ export class ConversationService {
             .eq('user_id', userId);
     }
 
-    static async updateConversation(conversationId: string, updates: { title?: string; avatar_url?: string }) {
+    static async updateConversation(conversationId: string, updates: { title?: string; avatar_url?: string; is_accepted?: boolean }) {
         return supabase
             .from('conversations')
             .update(updates)
             .eq('id', conversationId)
             .select()
             .single();
+    }
+
+    static async acceptConversation(conversationId: string) {
+        return this.updateConversation(conversationId, { is_accepted: true });
     }
 
     static async isParticipant(conversationId: string, userId: string): Promise<boolean> {

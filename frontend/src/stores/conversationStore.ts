@@ -29,6 +29,8 @@ interface ConversationState {
 
     sidebarOpen: boolean;
     setSidebarOpen: (isOpen: boolean) => void;
+    rightSidebarOpen: boolean;
+    setRightSidebarOpen: (isOpen: boolean) => void;
 }
 
 export const useConversationStore = create<ConversationState>((set, get) => ({
@@ -39,6 +41,7 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
     loading: false,
     sidebarTab: 'conversations',
     sidebarOpen: false,
+    rightSidebarOpen: false,
 
     fetchConversations: async () => {
         try {
@@ -111,4 +114,5 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
 
     setSidebarTab: (tab) => set({ sidebarTab: tab }),
     setSidebarOpen: (isOpen) => set({ sidebarOpen: isOpen }),
+    setRightSidebarOpen: (isOpen) => set({ rightSidebarOpen: isOpen }),
 }));

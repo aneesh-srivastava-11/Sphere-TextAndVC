@@ -137,4 +137,13 @@ export const api = {
     getAdminOverrides: () => request<any[]>('/api/admin/overrides'),
     addAdminOverride: (email: string) => request<any>('/api/admin/overrides', { method: 'POST', body: JSON.stringify({ email }) }),
     deleteAdminOverride: (email: string) => request<any>(`/api/admin/overrides/${email}`, { method: 'DELETE' }),
+
+    // Safety & Requests
+    reportUser: (targetUserId: string, conversationId: string, reason: string) =>
+        request<any>('/api/moderation/report-user', { method: 'POST', body: JSON.stringify({ targetUserId, conversationId, reason }) }),
+    unbanUser: (conversationId: string, userId: string) =>
+        request<any>('/api/moderation/unban', { method: 'POST', body: JSON.stringify({ conversationId, userId }) }),
+    acceptDM: (conversationId: string) =>
+        request<any>(`/api/conversations/${conversationId}/accept`, { method: 'POST' }),
+    getBlockedUsers: () => request<any[]>('/api/users/blocks/list'),
 };

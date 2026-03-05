@@ -1,9 +1,10 @@
-'use client';
-
-import { X, Mail, User, Shield, Info } from 'lucide-react';
-import { Account } from '@/types';
+import { useState } from 'react';
 import { useNicknameStore } from '@/stores/nicknameStore';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useConversationStore } from '@/stores/conversationStore';
+import { api } from '@/lib/api';
+import { AlertCircle, Ban, Loader2, X, Mail, User, Shield } from 'lucide-react';
+import { Account } from '@/types';
 
 interface UserProfileModalProps {
     user: Account;
@@ -12,9 +13,43 @@ interface UserProfileModalProps {
 
 export default function UserProfileModal({ user, onClose }: UserProfileModalProps) {
     const { getDisplayName } = useNicknameStore();
+    const { activeConversation } = useConversationStore();
     const isMobile = useIsMobile();
     const nickname = getDisplayName(user.id, user.display_name);
     const hasNickname = nickname !== user.display_name;
+
+    const [reporting, setReporting] = useState(false);
+    const [blocking, setBlocking] = useState(false);
+
+    const handleReport = async () => {
+        const reason = prompt('Please describe the reason for reporting this user:');
+        if (!reason || !activeConversation) return;
+
+        setReporting(true);
+        try {
+            await api.reportUser(user.id, activeConversation.id, reason);
+            alert('User reported successfully. Our team will review the context.');
+        } catch (err) {
+            alert('Failed to send report.');
+        } finally {
+            setReporting(false);
+        }
+    };
+
+    const handleBlock = async () => {
+        if (!confirm(`Are you sure you want to block ${nickname}? They won't be able to message you.`)) return;
+
+        setBlocking(true);
+        try {
+            await api.blockUser(user.id);
+            alert('User blocked.');
+            onClose();
+        } catch (err) {
+            alert('Failed to block user.');
+        } finally {
+            setBlocking(false);
+        }
+    };
 
     return (
         <div
@@ -142,43 +177,75 @@ export default function UserProfileModal({ user, onClose }: UserProfileModalProp
                             </div>
                         </div>
 
-                        <div style={{
-                            background: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            borderRadius: 16,
-                            padding: '12px 16px',
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+                    <button
+                        onClick={handleReport}
+                        disabled={reporting || !activeConversation}
+                        style={{
+                            flex: 1,
+                            padding: '12px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            borderRadius: 12,
+                            color: '#ef4444',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 10
-                        }}>
-                            <Info size={14} color="#737373" />
-                            <p style={{ fontSize: 11, color: '#737373' }}>
-                                Account created {new Date(user.created_at).toLocaleDateString()}
-                            </p>
-                        </div>
-                    </div>
-
+                            justifyContent: 'center',
+                            gap: 8,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {reporting ? <Loader2 size={16} className="animate-spin" /> : <AlertCircle size={16} />}
+                        Report
+                    </button>
                     <button
-                        onClick={onClose}
+                        onClick={handleBlock}
+                        disabled={blocking}
                         style={{
-                            marginTop: 24,
-                            width: '100%',
+                            flex: 1,
                             padding: '12px',
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.1)',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
                             borderRadius: 12,
                             color: '#fff',
                             fontSize: 13,
                             fontWeight: 600,
                             cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
                             transition: 'all 0.2s'
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                     >
-                        Close Profile
+                        {blocking ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />}
+                        Block
                     </button>
                 </div>
+
+                <button
+                    onClick={onClose}
+                    style={{
+                        marginTop: 12,
+                        width: '100%',
+                        padding: '12px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: 12,
+                        color: '#737373',
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                    }}
+                >
+                    Close Profile
+                </button>
             </div>
         </div>
     );

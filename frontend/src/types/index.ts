@@ -29,6 +29,7 @@ export interface Conversation {
     avatar_url: string | null;
     created_by: string;
     space_id: string | null;
+    is_accepted?: boolean;
     created_at: string;
     updated_at: string;
     participants?: Account[];

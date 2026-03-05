@@ -129,4 +129,18 @@ router.delete('/:id/participants/:userId', authMiddleware, async (req: AuthReque
     }
 });
 
+// Accept DM request
+router.post('/:id/accept', authMiddleware, async (req: AuthRequest, res) => {
+    try {
+        const isParticipant = await ConversationService.isParticipant(req.params.id, req.user!.id);
+        if (!isParticipant) return res.status(403).json({ error: 'Not a participant' });
+
+        const { error } = await ConversationService.acceptConversation(req.params.id);
+        if (error) return res.status(500).json({ error: error.message });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to accept DM request' });
+    }
+});
+
 export default router;

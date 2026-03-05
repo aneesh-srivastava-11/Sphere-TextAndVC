@@ -63,7 +63,13 @@
 
 html,
 body {
-  height: 100%;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  touch-action: none;
   background: radial-gradient(circle at top center, #171717 0%, #000000 100%);
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
