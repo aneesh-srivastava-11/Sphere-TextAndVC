@@ -23,6 +23,29 @@ export default function CallView() {
         }
     }, [localStream, isCameraOn]);
 
+    // Robust viewport lockdown for mobile
+    useEffect(() => {
+        if (isInCall) {
+            const originalStyle = window.getComputedStyle(document.body).overflow;
+            const originalPosition = document.body.style.position;
+            const originalTop = document.body.style.top;
+
+            // Prevent scrolling on body
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            document.body.style.height = '100%';
+
+            return () => {
+                document.body.style.overflow = originalStyle;
+                document.body.style.position = originalPosition;
+                document.body.style.top = originalTop;
+                document.body.style.width = '';
+                document.body.style.height = '';
+            };
+        }
+    }, [isInCall]);
+
     if (!isInCall) return null;
 
     const peerArray = Array.from(peers.values());

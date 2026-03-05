@@ -129,4 +129,12 @@ export const api = {
         request<any>('/api/calls/start', { method: 'POST', body: JSON.stringify({ conversationId }) }),
     endCall: (callId: string) => request<any>(`/api/calls/${callId}/end`, { method: 'POST' }),
     getActiveCall: (conversationId: string) => request<any>(`/api/calls/active/${conversationId}`),
+
+    // Admin
+    getAdminDomains: () => request<any[]>('/api/admin/domains'),
+    addAdminDomain: (domain: string) => request<any>('/api/admin/domains', { method: 'POST', body: JSON.stringify({ domain }) }),
+    deleteAdminDomain: (domain: string) => request<any>(`/api/admin/domains/${domain}`, { method: 'DELETE' }),
+    getAdminOverrides: () => request<any[]>('/api/admin/overrides'),
+    addAdminOverride: (email: string) => request<any>('/api/admin/overrides', { method: 'POST', body: JSON.stringify({ email }) }),
+    deleteAdminOverride: (email: string) => request<any>(`/api/admin/overrides/${email}`, { method: 'DELETE' }),
 };

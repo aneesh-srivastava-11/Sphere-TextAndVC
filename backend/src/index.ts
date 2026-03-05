@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 import authRoutes from './routes/auth';
+import adminRoutes from './routes/admin';
 import userRoutes from './routes/users';
 import conversationRoutes from './routes/conversations';
 import messageRoutes from './routes/messages';
@@ -34,6 +35,7 @@ app.get('/health', (_req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);

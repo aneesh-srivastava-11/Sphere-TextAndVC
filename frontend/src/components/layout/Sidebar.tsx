@@ -8,7 +8,8 @@ import { api } from '@/lib/api';
 import { useNicknameStore } from '@/stores/nicknameStore';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import ProfileModal from './ProfileModal';
-import { MessageSquare, Hash, Users, Plus, Search, LogOut, Globe, X, Settings } from 'lucide-react';
+import AdminPortal from './AdminPortal';
+import { MessageSquare, Hash, Users, Plus, Search, LogOut, Globe, X, Settings, Shield } from 'lucide-react';
 
 // Shared inline style constants
 const S = {
@@ -53,6 +54,7 @@ export default function Sidebar() {
     const [spaceDesc, setSpaceDesc] = useState('');
     const [userSearchQuery, setUserSearchQuery] = useState('');
     const [profileModalOpen, setProfileModalOpen] = useState(false);
+    const [adminPortalOpen, setAdminPortalOpen] = useState(false);
 
     const filteredConversations = conversations.filter(conv => {
         if (!searchQuery) return true;
@@ -343,6 +345,17 @@ export default function Sidebar() {
                                 {user?.email}
                             </p>
                         </div>
+                        {user?.is_admin && (
+                            <button
+                                onClick={() => setAdminPortalOpen(true)}
+                                style={{ background: 'none', border: 'none', color: '#525252', cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = '#525252'; }}
+                                title="Admin Portal"
+                            >
+                                <Shield size={16} />
+                            </button>
+                        )}
                         <button
                             onClick={() => setProfileModalOpen(true)}
                             style={{ background: 'none', border: 'none', color: '#525252', cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex', alignItems: 'center', transition: 'color 0.2s' }}
@@ -507,6 +520,7 @@ export default function Sidebar() {
             </aside>
 
             {profileModalOpen && <ProfileModal onClose={() => setProfileModalOpen(false)} />}
+            {adminPortalOpen && <AdminPortal onClose={() => setAdminPortalOpen(false)} />}
         </>
     );
 }
