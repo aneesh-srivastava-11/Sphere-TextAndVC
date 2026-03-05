@@ -28,8 +28,8 @@ interface CallState {
     handleParticipants: (data: { callId: string; participants: { userId: string; socketId: string; displayName: string }[] }) => Promise<void>;
     handleUserLeft: (data: { userId: string; callId: string }) => void;
     handleOffer: (data: { offer: RTCSessionDescriptionInit; fromUserId: string; fromSocketId: string; fromDisplayName: string }) => Promise<void>;
-    handleAnswer: (data: { answer: RTCSessionDescriptionInit; fromSocketId: string }) => void;
-    handleIceCandidate: (data: { candidate: RTCIceCandidateInit; fromSocketId: string }) => void;
+    handleAnswer: (data: { answer: RTCSessionDescriptionInit; fromSocketId: string }) => Promise<void>;
+    handleIceCandidate: (data: { candidate: RTCIceCandidateInit; fromSocketId: string }) => Promise<void>;
     handleStatusUpdate: (data: { userId: string; isMicOn: boolean; isCameraOn: boolean }) => void;
 }
 
@@ -252,7 +252,19 @@ export const useCallStore = create<CallState>((set, get) => ({
             });
         };
 
-        await pc.setRemoteDescription(data.offer);
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+
+        // Process queued candidates that might have arrived before setRemoteDescription
+        const queuedCandidates = (pc as any).candidateQueue || [];
+        for (const cand of queuedCandidates) {
+            try {
+                await pc.addIceCandidate(new RTCIceCandidate(cand));
+            } catch (err) {
+                console.error('Failed to add queued ICE candidate in handleOffer:', err);
+            }
+        }
+        (pc as any).candidateQueue = [];
+
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
@@ -274,23 +286,47 @@ export const useCallStore = create<CallState>((set, get) => ({
         });
     },
 
-    handleAnswer: (data) => {
+    handleAnswer: async (data) => {
         const peers = get().peers;
-        // Find peer by socketId
-        peers.forEach(peer => {
+        for (const [userId, peer] of peers.entries()) {
             if (peer.socketId === data.fromSocketId) {
-                peer.connection.setRemoteDescription(data.answer);
+                try {
+                    if (peer.connection.signalingState !== 'stable') {
+                        await peer.connection.setRemoteDescription(new RTCSessionDescription(data.answer));
+
+                        // Process queued candidates
+                        const queuedCandidates = (peer as any).candidateQueue || [];
+                        for (const cand of queuedCandidates) {
+                            await peer.connection.addIceCandidate(new RTCIceCandidate(cand));
+                        }
+                        (peer as any).candidateQueue = [];
+                    }
+                } catch (err) {
+                    console.error('Failed to set remote answer:', err);
+                }
+                break;
             }
-        });
+        }
     },
 
-    handleIceCandidate: (data: { candidate: RTCIceCandidateInit; fromSocketId: string }) => {
+    handleIceCandidate: async (data) => {
         const peers = get().peers;
-        peers.forEach(peer => {
+        for (const [userId, peer] of peers.entries()) {
             if (peer.socketId === data.fromSocketId) {
-                peer.connection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                try {
+                    if (peer.connection.remoteDescription) {
+                        await peer.connection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    } else {
+                        // Queue candidate if remote description isn't set yet
+                        if (!(peer as any).candidateQueue) (peer as any).candidateQueue = [];
+                        (peer as any).candidateQueue.push(data.candidate);
+                    }
+                } catch (err) {
+                    console.error('Failed to add ICE candidate:', err);
+                }
+                break;
             }
-        });
+        }
     },
 
     handleStatusUpdate: (data: { userId: string; isMicOn: boolean; isCameraOn: boolean }) => {

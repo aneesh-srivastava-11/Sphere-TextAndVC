@@ -8,6 +8,7 @@ export interface AuthRequest extends Request {
         supabase_uid: string;
         email: string;
         display_name: string;
+        is_admin: boolean;
     };
 }
 
@@ -43,8 +44,33 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
             return res.status(500).json({ error: 'Database error' });
         }
 
+        // Domain restriction check
         if (!account) {
-            // Auto-create account on first login
+            const email = user.email || '';
+            const domain = email.split('@')[1];
+
+            // 1. Check allowed domains (e.g., muj.manipal.edu)
+            const { data: isAllowedDomain } = await supabase
+                .from('allowed_domains')
+                .select('domain')
+                .eq('domain', domain)
+                .single();
+
+            // 2. Check if this specific email is overridden/authorized
+            const { data: isOverridden } = await supabase
+                .from('domain_overrides')
+                .select('email')
+                .eq('email', email)
+                .single();
+
+            if (!isAllowedDomain && !isOverridden) {
+                return res.status(403).json({
+                    error: 'Unauthorized domain',
+                    details: `Registration is restricted to specific domains (e.g., @muj.manipal.edu). Please contact an admin for manual authorization.`
+                });
+            }
+
+            // Auto-create account on first login since they are now authorized
             const { data: newAccount, error: createError } = await supabase
                 .from('accounts')
                 .insert({
@@ -66,6 +92,7 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
                 supabase_uid: newAccount.supabase_uid,
                 email: newAccount.email,
                 display_name: newAccount.display_name,
+                is_admin: newAccount.is_admin || false,
             };
         } else {
             req.user = {
@@ -73,6 +100,7 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
                 supabase_uid: account.supabase_uid,
                 email: account.email,
                 display_name: account.display_name,
+                is_admin: account.is_admin || false,
             };
         }
 

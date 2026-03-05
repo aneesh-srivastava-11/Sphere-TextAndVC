@@ -5,6 +5,7 @@ export interface Account {
     display_name: string;
     avatar_url: string | null;
     status: string;
+    is_admin?: boolean;
     created_at: string;
     role?: string;
 }
